@@ -155,15 +155,40 @@ class DashboardController extends Controller
             //echo "<pre>"; print_r($nama_zona_publikasi); die;
 
             /*untuk mendapatkan total berita pada website humas kanwil*/
-            foreach ($data_zonaAll_Kanwil as $idx => $val) {
-                if ($val == 'Website') {
-                    $tbl_berita_by_publikasi = DB::select(DB::raw("select count(website) as jml_berita from berita
-where kode_satker='$kode_satker_humas_kanwil' and website!='' AND tgl_input between '$tgl_dari_default' and '$tgl_sampai_default'"));
-                    $publikasi_id[$counter_kanwil] = $tbl_berita_by_publikasi[0]->jml_berita;
-                    $publikasi_id_angka[$counter_kanwil] = $tbl_berita_by_publikasi[0]->jml_berita;
+            /*VERSI LAMA*/
+//            foreach ($data_zonaAll_Kanwil as $idx => $val) {
+//                if ($val == 'Website') {
+//                    $tbl_berita_by_publikasi = DB::select(DB::raw("select count(website) as jml_berita from berita
+//where kode_satker='$kode_satker_humas_kanwil' and website!='' AND tgl_input between '$tgl_dari_default' and '$tgl_sampai_default'"));
+//                    $publikasi_id[$counter_kanwil] = $tbl_berita_by_publikasi[0]->jml_berita;
+//                    $publikasi_id_angka[$counter_kanwil] = $tbl_berita_by_publikasi[0]->jml_berita;
+//
+//                }
+//            }
+            /*VERSI BARU*/
+            collect($data_zonaAll_Kanwil)->each(function ($val, $idx) use (
+                &$publikasi_id,
+                &$publikasi_id_angka,
+                $kode_satker_humas_kanwil,
+                $tgl_dari_default,
+                $tgl_sampai_default,
+                &$counter_kanwil
+            ) {
+                if ($val === 'Website') {
+                    // Gunakan Query Builder, bukan raw SQL
+                    $jumlah = DB::table('berita')
+                        ->where('kode_satker', $kode_satker_humas_kanwil)
+                        ->whereNotNull('website')
+                        ->where('website', '!=', '')
+                        ->whereBetween('tgl_input', [$tgl_dari_default, $tgl_sampai_default])
+                        ->count();
 
+                    $publikasi_id[$counter_kanwil] = $jumlah;
+                    $publikasi_id_angka[$counter_kanwil] = $jumlah;
                 }
-            }
+            });
+
+            //echo "<pre>"; print_r($publikasi_id_angka); die;
 
             //celah nambah indeks brojo dan seterusnya kebawah
             $counter_kanwil += 1;

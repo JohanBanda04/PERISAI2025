@@ -2,12 +2,46 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Satker;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
+    public function apiLoginSatker(Request $request)
+    {
+        $request->validate([
+            'kode_satker' => 'required|string',
+            'password' => 'required|string',
+            'role_user' => 'required|string',
+        ]);
+
+        $satker = Satker::where('kode_satker', $request->kode_satker)
+            ->where('roles', $request->role_user)
+            ->first();
+
+        if (!$satker || !Hash::check($request->password, $satker->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kode satker atau password salah.'
+            ], 401);
+        }
+
+        $token = $satker->createToken('satker_app_token')->plainTextToken;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Login berhasil.',
+            'data' => [
+                'satker' => $satker,
+                'token' => $token
+            ]
+        ]);
+    }
+
+
     public function proseslogin(Request $request){
         //dd($request->nik." - ".$request->password);
         $pass = Hash::make($request->password);

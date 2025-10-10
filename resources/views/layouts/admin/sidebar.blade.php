@@ -210,7 +210,7 @@
                   </span>
                         <span class="nav-link-title">
                             {{--ASLIII--}}
-                            Dashboards
+                            Dashboard
                   </span>
                     </a>
                 </li>

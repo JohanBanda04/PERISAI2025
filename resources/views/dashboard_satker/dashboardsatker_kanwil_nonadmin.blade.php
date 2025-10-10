@@ -214,7 +214,7 @@
                     </form>
                 </div>
             </div>
-            <div class="row" id="">
+            <div hidden class="row" id="">
                 <div class="col-12">
                     <div class="realisasi-card card ">
                         <div class="card-body">
@@ -224,7 +224,7 @@
                     </div>
                 </div>
             </div>
-            <div class="row" id="" style="margin-top: 10px;">
+            <div hidden class="row" id="" style="margin-top: 10px;">
                 <div class="col-12">
                     <div class="realisasi-card card">
                         <div class="card-body">
@@ -258,7 +258,7 @@
                     </div>
                 </div>
             </div>
-            <div class="row" id="" style="margin-top: 10px;">
+            <div hidden class="row" id="" style="margin-top: 10px;">
                 <div class="col-12">
                     <div class="realisasi-card card">
                         <div class="card-body">
