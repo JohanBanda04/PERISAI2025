@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DatasatkerController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -17,3 +19,11 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+//Route::post('/login-satker',[AuthController::class,'apiLoginSatker']);
+Route::post('/login-satker', [AuthController::class, 'apiLoginSatker']);
+Route::middleware('auth:sanctum')->get('/datasatker', [DatasatkerController::class, 'apiIndex']);
+
+
+
+

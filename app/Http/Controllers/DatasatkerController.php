@@ -18,6 +18,35 @@ use PhpOffice\PhpWord\Settings;
 
 class DatasatkerController extends Controller
 {
+    public function apiIndex(Request $request){
+        $query = Satker::query();
+        // Jika ada pencarian nama satker
+        if (!empty($request->nama_satker_cari)) {
+            $query->where('name', 'like', '%' . $request->nama_satker_cari . '%');
+        }
+
+        // Pagination agar efisien
+        $satker = $query->orderBy('id', 'asc')->paginate(10);
+
+        // Generate kode baru
+        $results = DB::select(DB::raw("SELECT MAX(right(kode_satker,2)) as kode FROM satker"));
+        $kode_new = $results[0]->kode + 1;
+        $kode_satker = "SAT-NTB-0" . $kode_new;
+
+        // Kembalikan JSON ke Flutter
+        return response()->json([
+            'success' => true,
+            'message' => 'Data satker berhasil diambil',
+            'data' => $satker->items(),
+            'kode_baru' => $kode_satker,
+            'pagination' => [
+                'current_page' => $satker->currentPage(),
+                'last_page' => $satker->lastPage(),
+                'total' => $satker->total(),
+            ],
+        ]);
+
+    }
     public function index(Request $request)
     {
         //return "tes data satker";
@@ -39,6 +68,8 @@ class DatasatkerController extends Controller
         $kode_satker = "SAT-NTB-0" . $kode_new;
         return view('satker.index', compact('satker', 'kode_satker'));
     }
+
+
 
     public function store(Request $request)
     {
@@ -2577,7 +2608,7 @@ where kode_satker='$kode_satker' and length(youtube)>10 AND tgl_input between '$
                 ];
             }
 
-            // Hitung jumlah link valid per kolom
+            // Hitung jumlah link valid per kolom dengan closure
             $countValid = function ($col) use ($kode_satker, $dari, $sampai) {
                 return DB::table('berita')
                     ->where('kode_satker', $kode_satker)

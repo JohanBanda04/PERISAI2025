@@ -18,13 +18,16 @@ class Satker extends Authenticatable
     protected $primaryKey = "id";
 
     protected $fillable = [
-
-        'nama_satker',
-        'email_satker',
+        'name',
+        'username',
+        'kode_satker',
+        'email',
         'password',
         'no_hp',
         'roles',
-
+        'konfigurasi_berita',
+        'konfigurasi_rekap',
+        'foto',
     ];
 
 
