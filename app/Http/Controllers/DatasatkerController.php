@@ -18,7 +18,8 @@ use PhpOffice\PhpWord\Settings;
 
 class DatasatkerController extends Controller
 {
-    public function apiIndex(Request $request){
+    public function apiIndex(Request $request)
+    {
         $query = Satker::query();
         // Jika ada pencarian nama satker
         if (!empty($request->nama_satker_cari)) {
@@ -47,6 +48,7 @@ class DatasatkerController extends Controller
         ]);
 
     }
+
     public function index(Request $request)
     {
         //return "tes data satker";
@@ -68,7 +70,6 @@ class DatasatkerController extends Controller
         $kode_satker = "SAT-NTB-0" . $kode_new;
         return view('satker.index', compact('satker', 'kode_satker'));
     }
-
 
 
     public function store(Request $request)
@@ -2153,12 +2154,13 @@ class DatasatkerController extends Controller
 
     public function rekapMediaByPrioritas()
     {
-        //echo "rekapMediaByPrioritas";
+        //echo "rekapMediaByPrioritas"; die;
         if (auth()->user()->roles == 'humas_satker') {
             abort(403);
         }
         $satker = Satker::all();
         $priorities = Prioritas::with(['berita']);
+        //dd($priorities->get());
         //dd($satker);
         //dd($priorities->get());
         return view('laporan.rekapprioritas', compact('satker', 'priorities'));
@@ -2212,6 +2214,7 @@ class DatasatkerController extends Controller
         //$karyawan = DB::table('karyawan')->orderBy('nama_lengkap')->get();
         return view('laporan.laporanberita', compact('namabulan', 'satker'));
     }
+
     public function laporanberitapermedia()
     {
         //echo "link laporanpermedia berita cuy"; die;
@@ -2236,7 +2239,7 @@ class DatasatkerController extends Controller
         $mediapartners = Mediapartner::all();
         //dd($mediapartners);
         //$karyawan = DB::table('karyawan')->orderBy('nama_lengkap')->get();
-        return view('laporan.laporanberitapermedia', compact('mediapartners','judul_web','namabulan', 'satker'));
+        return view('laporan.laporanberitapermedia', compact('mediapartners', 'judul_web', 'namabulan', 'satker'));
     }
 
     public function getberitabytanggal($kode_satker, Request $request)
@@ -2395,20 +2398,158 @@ where kode_satker='$kode_satker' and length(youtube)>10 AND tgl_input between '$
 
     public function cetakrekapprioritasberita(Request $request)
     {
-        dd($request);
+        //dd($request);
         $namabulan = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September",
             "Oktober", "November", "Desember",
         ];
 
-        /*  kode_satker
-            -jenis_media-
-            -kode_divisi_pilihan-
-            kode_prioritas*/
+        $dari = $request->dari;
+        $sampai = $request->sampai;
+        $kode_satker = $request->kode_satker;
         $jenis_media = $request->jenis_media;
         $kode_divisi_pilihan = $request->kode_divisi_pilihan;
+        $kode_prioritas = $request->kode_prioritas;
 
-        /*Tanggal Dari*/
-        $dari = $request->dari;
+        //pisahkan tanggal
+        list($tahun_dari, $bulan_dari, $tgl_dari) = explode('-', $dari);
+        list($tahun_sampai, $bulan_sampai, $tgl_sampai) = explode('-', $sampai);
+
+        // Ambil Nama Satker
+        $satker_name = DB::table('satker')->where('kode_satker',$kode_satker)->value('name')??'-';
+
+        // =========================
+        // 🔍 Query utama berita
+        // =========================
+        $queryGetBerita = DB::table('berita')
+            ->join('tbl_prioritas', 'berita.prioritas_id', '=', 'tbl_prioritas.id_prioritas')
+            ->select(
+                'berita.*',
+                'tbl_prioritas.nama_prioritas',
+                'tbl_prioritas.nama_prioritas_lengkap',
+                'tbl_prioritas.skala_prioritas'
+            )
+            ->where('berita.kode_satker', $kode_satker)
+            ->whereBetween('berita.tgl_input', [$dari, $sampai]);
+
+
+        // Filter divisi
+        if ($kode_divisi_pilihan && $kode_divisi_pilihan !== 'all_berita') {
+            if ($kode_divisi_pilihan === 'berita_umum') {
+                $queryGetBerita->where(function ($q) {
+                    $q->whereNull('berita.kode_divisi')
+                        ->orWhere('berita.kode_divisi', '');
+                });
+            } else {
+                $queryGetBerita->where('berita.kode_divisi', $kode_divisi_pilihan);
+            }
+        }
+
+        // Filter prioritas
+        if ($kode_prioritas && $kode_prioritas !== 'all_priority') {
+            $queryGetBerita->where('berita.prioritas_id', $kode_prioritas);
+        }
+
+        // Filter jenis media
+        if (in_array($jenis_media, ['media_lokal', 'media_nasional'])) {
+            $queryGetBerita->whereNotNull("berita.$jenis_media")
+                ->where("berita.$jenis_media", '!=', '[]');
+        }
+
+        // =========================
+        // Urutkan berdasarkan skala_prioritas (bukan id_prioritas)
+        // =========================
+        $data_berita = $queryGetBerita
+            ->orderBy('tbl_prioritas.skala_prioritas', 'asc') // urutan prioritas utama
+            ->orderBy('berita.tgl_input', 'asc')              // urutan sekunder
+            ->get();
+
+        //dd($data_berita);
+        // =========================
+        // Parsing kolom media
+        // =========================
+        $filteredBerita = [];
+        foreach ($data_berita as $b) {
+            $mediaField = $jenis_media;
+            $mediaJson = $b->$mediaField ? json_decode($b->$mediaField, true) : [];
+
+            foreach ($mediaJson as $m) {
+                $parts = explode('|||', $m);
+                if (count($parts) >= 3) {
+                    $filteredBerita[] = [
+                        'id_berita'   => $b->id_berita,
+                        'tgl_input'   => $b->tgl_input,
+                        'judul'       => $parts[1] ?? $b->nama_berita,
+                        'kode_media'  => $parts[0] ?? '-',
+                        'link'        => $parts[2] ?? '-',
+                        'kode_divisi' => $b->kode_divisi,
+                        'prioritas'   => $b->nama_prioritas,
+                        'prioritas_id'=> $b->prioritas_id,
+                        'skala_prioritas' => $b->skala_prioritas,
+                    ];
+                }
+            }
+        }
+
+        // =========================
+        // Ambil data media partner (opsional untuk summary)
+        // =========================
+        $mediapartner = DB::table('mediapartner')->get();
+
+        if (isset($_POST['exportexcelrekapexternal'])) {
+            //dd("coba export external");
+            // Gunakan export class untuk hasil rapi
+            $time = date('d-M-Y_H-i-s');
+            $filename = "Rekap_Berita_Prioritas_{$satker_name}_{$time}.xls";
+
+            header("Content-Type: application/vnd.ms-excel");
+            header("Content-Disposition: attachment; filename=\"$filename\"");
+
+            // Hitung rekap media
+            $countPerMedia = [];
+            foreach ($filteredBerita as $b) {
+                $kode = $b['kode_media'] ?? '-';
+                $link = trim($b['link'] ?? '');
+                if ($link === '' || $link === '-' || $link === '--') continue;
+                if (!isset($countPerMedia[$kode])) $countPerMedia[$kode] = 0;
+                $countPerMedia[$kode]++;
+            }
+            $totalBerita = array_sum($countPerMedia);
+
+            return view('laporan.cetakrekapprioritasberita_excel', compact(
+                'filteredBerita',
+                'namabulan',
+                'tgl_dari', 'bulan_dari', 'tahun_dari',
+                'tgl_sampai', 'bulan_sampai', 'tahun_sampai',
+                'satker_name',
+                'mediapartner',
+                'kode_divisi_pilihan',
+                'kode_prioritas',
+                'countPerMedia',
+                'totalBerita',
+                'jenis_media'
+            ));
+        }
+        // =========================
+        // 🔹 Kirim ke view
+        // =========================
+        return view('laporan.cetakrekapprioritasberita', [
+            'filteredBerita'      => $filteredBerita,
+            'satker_name'         => $satker_name,
+            'namabulan'           => $namabulan,
+            'tahun_dari'          => $tahun_dari,
+            'bulan_dari'          => $bulan_dari,
+            'tgl_dari'            => $tgl_dari,
+            'tahun_sampai'        => $tahun_sampai,
+            'bulan_sampai'        => $bulan_sampai,
+            'tgl_sampai'          => $tgl_sampai,
+            'kode_satker'         => $kode_satker,
+            'jenis_media'         => $jenis_media,
+            'kode_divisi_pilihan' => $kode_divisi_pilihan,
+            'kode_prioritas'      => $kode_prioritas,
+            'mediapartner'        => $mediapartner,
+            'kode_media'          => 'semua',
+        ]);
+
 
     }
 
@@ -2728,9 +2869,7 @@ where kode_satker='$kode_satker' and length(youtube)>10 AND tgl_input between '$
                 'tgl_sampai', 'bulan_sampai', 'tahun_sampai',
                 'satker_name', 'mediapartner', 'kode_divisi_pilihan', 'kode_media'
             ));
-        }
-
-        /* ============================================================
+        } /* ============================================================
            MEDIA NASIONAL
            ============================================================ */
         elseif ($jenis_media === 'media_nasional') {
@@ -2775,7 +2914,6 @@ where kode_satker='$kode_satker' and length(youtube)>10 AND tgl_input between '$
 
         abort(404, 'Jenis media tidak dikenali.');
     }
-
 
 
     public function cetaklaporanberitapermedia_olddua(Request $request)
@@ -2872,9 +3010,6 @@ where kode_satker='$kode_satker' and length(youtube)>10 AND tgl_input between '$
             'satker_name'
         ));
     }
-
-
-
 
 
     public function cetaklaporanberitapermedia_old07Oktober2025(Request $request)
