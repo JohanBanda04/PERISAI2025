@@ -8,6 +8,8 @@ use App\Models\Konfigurasiberita;
 use App\Models\Mediapartner;
 use App\Models\Prioritas;
 use App\Models\Satker;
+//use Dotenv\Validator;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +20,7 @@ use PhpOffice\PhpWord\Settings;
 
 class DatasatkerController extends Controller
 {
-    public function apiIndex(Request $request)
+    public function apiIndex_bk(Request $request)
     {
         $query = Satker::query();
         // Jika ada pencarian nama satker
@@ -48,6 +50,176 @@ class DatasatkerController extends Controller
         ]);
 
     }
+
+    public function apiIndex(Request $request)
+    {
+        try {
+            $query = Satker::query();
+
+            // 🔍 Pencarian: bisa pakai 'nama_satker_cari' atau 'search'
+            $keyword = $request->nama_satker_cari ?? $request->search;
+            if (!empty($keyword)) {
+                $query->where(function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%$keyword%")
+                        ->orWhere('kode_satker', 'like', "%$keyword%")
+                        ->orWhere('roles', 'like', "%$keyword%");
+                });
+            }
+
+            // 🔹 Pagination (10 per halaman)
+            $satker = $query->orderBy('id', 'asc')->paginate(10);
+
+            // 🔹 Generate kode satker baru (aman jika tabel kosong)
+            $lastKode = \DB::table('satker')
+                ->selectRaw('MAX(RIGHT(kode_satker, 2)) as kode')
+                ->first();
+
+            $kodeBaru = $lastKode && $lastKode->kode
+                ? intval($lastKode->kode) + 1
+                : 1;
+
+            $kode_satker = sprintf("SAT-NTB-%02d", $kodeBaru);
+
+            // 🔹 Response JSON
+            return response()->json([
+                'success' => true,
+                'message' => 'Data satker berhasil diambil',
+                'data' => $satker->items(),
+                'kode_baru' => $kode_satker,
+                'pagination' => [
+                    'current_page' => $satker->currentPage(),
+                    'last_page' => $satker->lastPage(),
+                    'total' => $satker->total(),
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function apiStore(Request $request){
+        $validator = Validator::make($request->all(),[
+            'name'=>'required|string|max:100',
+            'kode_satker'  => 'required|string|unique:satker,kode_satker',
+            'email'        => 'required|email|unique:satker,email',
+            'password'     => 'required|string|min:6',
+            'no_hp'        => 'nullable|string|max:20',
+            'roles'        => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+        try{
+            $satker = new Satker();
+            $satker->name = $request->name;
+            $satker->kode_satker = $request->kode_satker;
+            $satker->email = $request->email;
+            $satker->password = Hash::make($request->password);
+            $satker->no_hp = $request->no_hp;
+            $satker->roles = $request->roles;
+            $satker->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data satker berhasil ditambahkan',
+                'data'    => $satker,
+            ], 201);
+        } catch (\Exception $e){
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menambahkan data: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function apiUpdate(Request $request, $id)
+    {
+        $satker = Satker::find($id);
+
+        if (!$satker) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data satker tidak ditemukan',
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name'         => 'required|string|max:100',
+            'kode_satker'  => 'required|string|unique:satker,kode_satker,' . $id,
+            'email'        => 'required|email|unique:satker,email,' . $id,
+            'no_hp'        => 'nullable|string|max:20',
+            'roles'        => 'required|string',
+            'password'     => 'nullable|string|min:6',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $satker->name = $request->name;
+            $satker->kode_satker = $request->kode_satker;
+            $satker->email = $request->email;
+            $satker->no_hp = $request->no_hp;
+            $satker->roles = $request->roles;
+
+            if (!empty($request->password)) {
+                $satker->password = Hash::make($request->password);
+            }
+
+            $satker->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data satker berhasil diperbarui',
+                'data'    => $satker,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui data: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function apiDestroy($id)
+    {
+        $satker = Satker::find($id);
+
+        if (!$satker) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data satker tidak ditemukan',
+            ], 404);
+        }
+
+        try {
+            $satker->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data satker berhasil dihapus',
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus data: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
 
     public function index(Request $request)
     {

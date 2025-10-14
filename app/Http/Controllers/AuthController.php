@@ -40,6 +40,29 @@ class AuthController extends Controller
             ]
         ]);
     }
+    public function apiLogoutSatker(Request $request){
+        try{
+        // Cek apakah user sudah login dengan token
+            if($request->user()){
+                // Hapus token yang digunakan untuk autentikasi sekarang
+                $request->user()->currentAccessToken()->delete();
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Logout berhasil.',
+                ], 200);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak ada pengguna yang sedang login.',
+                ], 401);
+            }
+        }catch (\Exception $e){
+            return response()->json([
+                'success'=>false,
+                'message'=>'Terjadi kesalahan saat logout :'.$e->getMessage(),
+            ],500);
+        }
+    }
 
 
     public function proseslogin(Request $request){
