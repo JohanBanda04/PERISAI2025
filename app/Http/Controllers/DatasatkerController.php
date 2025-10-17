@@ -9,6 +9,7 @@ use App\Models\Mediapartner;
 use App\Models\Prioritas;
 use App\Models\Satker;
 //use Dotenv\Validator;
+use http\Env\Response;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -52,6 +53,42 @@ class DatasatkerController extends Controller
     }
 
     public function apiIndex(Request $request)
+    {
+        $query = Satker::query();
+
+        //Jika ada parameter pencarian
+
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('kode_satker', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('roles', 'like', "%{$search}%")
+                    ->orWhere('no_hp', 'like', "%{$search}%");
+            });
+        }
+        $satker = $query->orderBy('id', 'asc')->paginate(10);
+
+        //Generate kode satker baru
+        $results = DB::select(DB::raw("SELECT MAX(right(kode_satker,2)) as kode FROM satker"));
+        $kode_new = ($results[0]->kode ?? 0) + 1;
+        $kode_satker = "SAT-NTB-0" . $kode_new;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data satker berhasil diambil',
+            'data' => $satker->items(),
+            'kode_baru' => $kode_satker,
+            'pagination' => [
+                'current_page' => $satker->currentPage(),
+                'last_page' => $satker->lastPage(),
+                'total' => $satker->total(),
+            ],
+        ]);
+    }
+
+    public function apiIndex_bk2(Request $request)
     {
         try {
             $query = Satker::query();
@@ -100,24 +137,25 @@ class DatasatkerController extends Controller
         }
     }
 
-    public function apiStore(Request $request){
-        $validator = Validator::make($request->all(),[
-            'name'=>'required|string|max:100',
-            'kode_satker'  => 'required|string|unique:satker,kode_satker',
-            'email'        => 'required|email|unique:satker,email',
-            'password'     => 'required|string|min:6',
-            'no_hp'        => 'nullable|string|max:20',
-            'roles'        => 'required|string',
+    public function apiStore(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:100',
+            'kode_satker' => 'required|string|unique:satker,kode_satker',
+            'email' => 'required|email|unique:satker,email',
+            'password' => 'required|string|min:6',
+            'no_hp' => 'nullable|string|max:20',
+            'roles' => 'required|string',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal',
-                'errors'  => $validator->errors(),
+                'errors' => $validator->errors(),
             ], 422);
         }
-        try{
+        try {
             $satker = new Satker();
             $satker->name = $request->name;
             $satker->kode_satker = $request->kode_satker;
@@ -130,9 +168,9 @@ class DatasatkerController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Data satker berhasil ditambahkan',
-                'data'    => $satker,
+                'data' => $satker,
             ], 201);
-        } catch (\Exception $e){
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal menambahkan data: ' . $e->getMessage(),
@@ -143,7 +181,7 @@ class DatasatkerController extends Controller
     public function apiUpdate(Request $request, $id)
     {
         $satker = Satker::find($id);
-
+        //return $satker;
         if (!$satker) {
             return response()->json([
                 'success' => false,
@@ -152,19 +190,19 @@ class DatasatkerController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'name'         => 'required|string|max:100',
-            'kode_satker'  => 'required|string|unique:satker,kode_satker,' . $id,
-            'email'        => 'required|email|unique:satker,email,' . $id,
-            'no_hp'        => 'nullable|string|max:20',
-            'roles'        => 'required|string',
-            'password'     => 'nullable|string|min:6',
+            'name' => 'required|string|max:100',
+            'kode_satker' => 'required|string|unique:satker,kode_satker,' . $id,
+            'email' => 'required|email|unique:satker,email,' . $id,
+            'no_hp' => 'nullable|string|max:20',
+            'roles' => 'required|string',
+            'password' => 'nullable|string|min:6',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal',
-                'errors'  => $validator->errors(),
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -184,7 +222,7 @@ class DatasatkerController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Data satker berhasil diperbarui',
-                'data'    => $satker,
+                'data' => $satker,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -2587,7 +2625,7 @@ where kode_satker='$kode_satker' and length(youtube)>10 AND tgl_input between '$
         list($tahun_sampai, $bulan_sampai, $tgl_sampai) = explode('-', $sampai);
 
         // Ambil Nama Satker
-        $satker_name = DB::table('satker')->where('kode_satker',$kode_satker)->value('name')??'-';
+        $satker_name = DB::table('satker')->where('kode_satker', $kode_satker)->value('name') ?? '-';
 
         // =========================
         // 🔍 Query utama berita
@@ -2631,8 +2669,8 @@ where kode_satker='$kode_satker' and length(youtube)>10 AND tgl_input between '$
         // Urutkan berdasarkan skala_prioritas (bukan id_prioritas)
         // =========================
         $data_berita = $queryGetBerita
-            ->orderBy('tbl_prioritas.skala_prioritas', 'asc') // urutan prioritas utama
-            ->orderBy('berita.tgl_input', 'asc')              // urutan sekunder
+            ->orderBy('tbl_prioritas.skala_prioritas', 'asc')// urutan prioritas utama
+            ->orderBy('berita.tgl_input', 'asc')// urutan sekunder
             ->get();
 
         //dd($data_berita);
@@ -2648,14 +2686,14 @@ where kode_satker='$kode_satker' and length(youtube)>10 AND tgl_input between '$
                 $parts = explode('|||', $m);
                 if (count($parts) >= 3) {
                     $filteredBerita[] = [
-                        'id_berita'   => $b->id_berita,
-                        'tgl_input'   => $b->tgl_input,
-                        'judul'       => $parts[1] ?? $b->nama_berita,
-                        'kode_media'  => $parts[0] ?? '-',
-                        'link'        => $parts[2] ?? '-',
+                        'id_berita' => $b->id_berita,
+                        'tgl_input' => $b->tgl_input,
+                        'judul' => $parts[1] ?? $b->nama_berita,
+                        'kode_media' => $parts[0] ?? '-',
+                        'link' => $parts[2] ?? '-',
                         'kode_divisi' => $b->kode_divisi,
-                        'prioritas'   => $b->nama_prioritas,
-                        'prioritas_id'=> $b->prioritas_id,
+                        'prioritas' => $b->nama_prioritas,
+                        'prioritas_id' => $b->prioritas_id,
                         'skala_prioritas' => $b->skala_prioritas,
                     ];
                 }
@@ -2705,21 +2743,21 @@ where kode_satker='$kode_satker' and length(youtube)>10 AND tgl_input between '$
         // 🔹 Kirim ke view
         // =========================
         return view('laporan.cetakrekapprioritasberita', [
-            'filteredBerita'      => $filteredBerita,
-            'satker_name'         => $satker_name,
-            'namabulan'           => $namabulan,
-            'tahun_dari'          => $tahun_dari,
-            'bulan_dari'          => $bulan_dari,
-            'tgl_dari'            => $tgl_dari,
-            'tahun_sampai'        => $tahun_sampai,
-            'bulan_sampai'        => $bulan_sampai,
-            'tgl_sampai'          => $tgl_sampai,
-            'kode_satker'         => $kode_satker,
-            'jenis_media'         => $jenis_media,
+            'filteredBerita' => $filteredBerita,
+            'satker_name' => $satker_name,
+            'namabulan' => $namabulan,
+            'tahun_dari' => $tahun_dari,
+            'bulan_dari' => $bulan_dari,
+            'tgl_dari' => $tgl_dari,
+            'tahun_sampai' => $tahun_sampai,
+            'bulan_sampai' => $bulan_sampai,
+            'tgl_sampai' => $tgl_sampai,
+            'kode_satker' => $kode_satker,
+            'jenis_media' => $jenis_media,
             'kode_divisi_pilihan' => $kode_divisi_pilihan,
-            'kode_prioritas'      => $kode_prioritas,
-            'mediapartner'        => $mediapartner,
-            'kode_media'          => 'semua',
+            'kode_prioritas' => $kode_prioritas,
+            'mediapartner' => $mediapartner,
+            'kode_media' => 'semua',
         ]);
 
 

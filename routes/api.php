@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BeritaController;
 use App\Http\Controllers\DatasatkerController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -33,6 +34,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/datasatker', [DatasatkerController::class, 'apiStore'])->name('api.satker.store');
     Route::put('/datasatker/{id}', [DatasatkerController::class, 'apiUpdate'])->name('api.satker.update');
     Route::delete('/datasatker/{id}', [DatasatkerController::class, 'apiDestroy'])->name('api.satker.destroy');
+
+    /*data berita*/
+    Route::get('/berita',[BeritaController::class,'apiIndex'])->name('api.berita.index');
+    Route::post('/berita',[BeritaController::class,'apiStore'])->name('api.berita.store');
+    Route::put('/berita/{id}',[BeritaController::class,'apiUpdate'])->name('api.berita.update');
+    Route::delete('/berita/{id}',[BeritaController::class,'apiDestroy'])->name('api.berita.destroy');
 });
 
 
