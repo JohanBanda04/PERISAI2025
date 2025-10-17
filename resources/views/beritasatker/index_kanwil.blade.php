@@ -432,7 +432,7 @@
                         <div class="row">
                             <center>
                                 <small class="lh-1" style="color: #fe1010; font-weight: bold;background-color: yellow; border-radius: 10px;">
-                                    <i>(*Wajib Diisi Sendiri)</i>
+                                    <i>(*Wajib Diisis Sendiri)</i>
                                 </small>
                             </center>
                             <div class="col-12">
@@ -607,7 +607,7 @@
                                         </center>
                                         <button class="add_field_button btn btn-success m-l-15 col-lg-12 "
                                                 style="margin-bottom: 15px;">
-                                            Tambah Kolom Media Lokal {{--triggerjo--}}
+                                            Tambah Kolom Mediaa Lokal {{--triggerjo--}}
                                         </button>
                                         <table class="m-l-15 col-lg-12">
                                             <tr class="">

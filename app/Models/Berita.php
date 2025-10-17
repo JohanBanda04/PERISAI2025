@@ -5,39 +5,32 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
-
-class Berita extends Authenticatable
+class Berita extends Model
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasFactory;
 
-    protected $table="berita";
-    protected $primaryKey="id_berita";
+    protected $table = "berita";
+    protected $primaryKey = "id_berita";
 
-    protected $guarded = [
-        'id_berita',
-    ];
+    protected $guarded = ['id_berita'];
 
-
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
-
-
+    // pastikan kolom JSON otomatis didecode
     protected $casts = [
-        'email_verified_at' => 'datetime',
+        'media_lokal' => 'array',
+        'media_nasional' => 'array',
+        'tgl_input' => 'datetime',
+        'tgl_update' => 'datetime',
     ];
 
+    // relasi ke tabel satker
     public function satker()
     {
         return $this->belongsTo(Satker::class, 'kode_satker', 'kode_satker');
     }
 
-    public function prioritas(){
-        return $this->belongsTo(Prioritas::class,'prioritas_id','id_prioritas');
+    // relasi ke tabel prioritas
+    public function prioritas()
+    {
+        return $this->belongsTo(Prioritas::class, 'prioritas_id', 'id_prioritas');
     }
 }
