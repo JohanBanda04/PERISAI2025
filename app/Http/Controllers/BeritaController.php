@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Berita;
 use App\Models\Prioritas;
-use http\Env\Response;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,9 +26,9 @@ class BeritaController extends Controller
 
             $query = Berita::query();
 
-            /*Batasi data sesuai role*/
+            /** 🔒 Batasi data sesuai role */
             if ($user->roles === 'superadmin') {
-                // bisa lihat semua data
+                // superadmin bisa lihat semua
             } elseif (in_array($user->roles, ['humas_satker', 'humas_kanwil'])) {
                 $query->where('kode_satker', $user->kode_satker);
             } else {
@@ -39,38 +38,39 @@ class BeritaController extends Controller
                 ], 403);
             }
 
-            // filter berdasarkan parameter request
+            /** 🔍 Filter berdasarkan parameter request */
             if ($request->filled('nama_berita')) {
-                $query->where('nama_berita', 'like', '%' . $request->nama_berita . '%');
+                $query->where('nama_berita', 'LIKE', '%' . $request->nama_berita . '%');
+            }
+
+            if ($request->filled('kode_divisi') && $request->kode_divisi !== 'all_berita') {
+                $query->where('kode_divisi', $request->kode_divisi);
             }
 
             if ($request->filled('dari') && $request->filled('sampai')) {
                 $query->whereBetween('tgl_input', [$request->dari, $request->sampai]);
             }
 
-            if ($request->filled('kode_divisi')) {
-                if ($request->kode_divisi !== 'all_berita') {
-                    $query->where('kode_divisi', $request->kode_divisi);
-                }
-            }
-
-            // Urutkan data
+            /** Urutkan & paginasi */
             $query->orderBy('id_berita', 'desc');
-
-            // Ambil data
             $berita = $query->paginate(10);
 
-            // Ambil data tambahan referensi
+            /** 🔗 Ambil data referensi */
             $dataPrioritas = Prioritas::orderBy('skala_prioritas', 'asc')->get();
             $getMedia = DB::table('mediapartner')
                 ->where('kode_satker_penjalin', $user->kode_satker)
                 ->get();
             $getDivisi = DB::table('divisi')->get();
 
-            /*Kirim response JSON*/
+            /** Kembalikan response */
             return response()->json([
                 'success' => true,
                 'message' => 'Data berita berhasil diperoleh',
+                'filters' => [
+                    'nama_berita' => $request->nama_berita,
+                    'kode_divisi' => $request->kode_divisi,
+                    'periode' => [$request->dari, $request->sampai],
+                ],
                 'data' => $berita->items(),
                 'pagination' => [
                     'current_page' => $berita->currentPage(),
@@ -81,10 +81,11 @@ class BeritaController extends Controller
                 'divisi' => $getDivisi,
                 'prioritas' => $dataPrioritas,
             ], 200);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan ' . $e->getMessage(),
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -112,35 +113,38 @@ class BeritaController extends Controller
             $berita->instagram = $request->instagram ?? '-';
             $berita->twitter = $request->twitter ?? '-';
             $berita->tiktok = $request->tiktok ?? '-';
-            $berita->sippn = $request->sippn ??'-';
+            $berita->sippn = $request->sippn ?? '-';
             $berita->youtube = $request->youtube ?? '-';
 
-            //Simpan media_lokal & media_nasional TANPA json_encode manual
-            //biarkan Laravel casts otomatis menyimpan sebagai JSON
+            // Simpan media_lokal & media_nasional TANPA json_encode manual
+            // biarkan Laravel casts otomatis menyimpan sebagai JSON
             $berita->media_lokal = $this->normalizeMediaInput($request->media_lokal);
             $berita->media_nasional = $this->normalizeMediaInput($request->media_nasional);
 
             $berita->tgl_input = now();
             $berita->tgl_update = now();
+            //return "hey bro";
             $berita->save();
 
+
+
             return response()->json([
-                'success'=>true,
-                'message'=>'Data berita berhasil disimpan',
-                'data'=>$berita,
-            ],201);
+                'success' => true,
+                'message' => 'Data berita berhasil disimpan',
+                'data' => $berita,
+            ], 201);
 
         } catch (ValidationException $e) {
             return response()->json([
-                'success'=>false,
-                'message'=>'Validasi gagal',
-                'errors'=>$e->errors(),
-            ],422);
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $e->errors(),
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
-                'success'=>false,
-                'message'=>'Terjadi kesalahan: '. $e->getMessage(),
-            ],500);
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
+            ], 500);
         }
     }
 
@@ -153,41 +157,122 @@ class BeritaController extends Controller
             return [];
         }
 
-        // Kalau string JSON -> decode
+        // Kalau string JSON → decode
         if (is_string($value)) {
             $decoded = json_decode($value, true);
             if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
                 return $decoded;
             }
-            //Kalau cuma string biasa -> jadikan array tunggal
+            // Kalau cuma string biasa → jadikan array tunggal
             return [$value];
         }
 
-        //Kalau array langsung ->kembalikan saja
+        // Kalau array langsung → kembalikan saja
         if (is_array($value)) {
             return $value;
         }
 
-        //Default
         return [];
     }
 
 
     /**
-     * API : Update Berita
+     * API: Update berita
      */
     public function apiUpdate(Request $request, $id)
     {
-        try{
+        try {
             $berita = Berita::find($id);
-            return \response()->json([
-                'message'=>'test bro',
-                'data'=>$berita
+
+            if (!$berita) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data berita tidak ditemukan',
+                ], 404);
+            }
+
+            // ✅ Validasi dinamis hanya untuk field yang dikirim
+            $rules = [
+                'nama_berita'   => 'string',
+                'kode_divisi'   => 'string',
+                'prioritas_id'  => 'integer',
+                'facebook'      => 'nullable|string',
+                'website'       => 'nullable|string',
+                'instagram'     => 'nullable|string',
+                'twitter'       => 'nullable|string',
+                'tiktok'        => 'nullable|string',
+                'sippn'         => 'nullable|string',
+                'youtube'       => 'nullable|string',
+            ];
+
+            $validated = $request->validate(
+                collect($rules)
+                    ->only(array_keys($request->all())) // hanya validasi field yang dikirim
+                    ->toArray()
+            );
+
+            // 🚀 Update otomatis semua field valid
+            $berita->fill($validated);
+
+            // 🧩 Tangani media lokal & nasional
+            foreach (['media_lokal', 'media_nasional'] as $field) {
+                if ($request->has($field)) {
+                    $berita->$field = $this->normalizeMediaInput($request->$field);
+                }
+            }
+
+            $berita->tgl_update = now();
+            $berita->save();
+            $berita->refresh(); // ✅ tambahkan ini
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data berita berhasil diperbarui',
+                'data' => $berita,
             ]);
-        } catch (ValidationException $e){
 
-        } catch (\Exception $e){
 
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+
+    /**
+     * API: Hapus berita
+     */
+    public function apiDestroy($id)
+    {
+        try {
+            $berita = Berita::find($id);
+            if (!$berita) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data berita tidak ditemukan',
+                ], 404);
+            }
+
+            $berita->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data berita berhasil dihapus',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
+            ], 500);
         }
     }
 }
