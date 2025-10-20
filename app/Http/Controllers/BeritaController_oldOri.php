@@ -10,11 +10,11 @@ use Illuminate\Support\Facades\DB;
 
 class BeritaController extends Controller
 {
-    /**
-     * API: Ambil data berita per satker dengan filter & role access
-     */
     public function apiIndex(Request $request)
     {
+        /**
+         * API: Ambil data berita per satker dengan filter & role access
+         */
         try {
             $user = auth()->user();
             if (!$user) {
@@ -26,9 +26,9 @@ class BeritaController extends Controller
 
             $query = Berita::query();
 
-            // 🔹 Batasi data sesuai role
+            /** 🔒 Batasi data sesuai role */
             if ($user->roles === 'superadmin') {
-                // bisa lihat semua data
+                // superadmin bisa lihat semua
             } elseif (in_array($user->roles, ['humas_satker', 'humas_kanwil'])) {
                 $query->where('kode_satker', $user->kode_satker);
             } else {
@@ -38,36 +38,39 @@ class BeritaController extends Controller
                 ], 403);
             }
 
-            // 🔹 Filter berdasarkan parameter request
+            /** 🔍 Filter berdasarkan parameter request */
             if ($request->filled('nama_berita')) {
-                $query->where('nama_berita', 'like', '%' . $request->nama_berita . '%');
-            }
-
-            if ($request->filled('dari') && $request->filled('sampai')) {
-                $query->whereBetween('tgl_input', [$request->dari, $request->sampai]);
+                $query->where('nama_berita', 'LIKE', '%' . $request->nama_berita . '%');
             }
 
             if ($request->filled('kode_divisi') && $request->kode_divisi !== 'all_berita') {
                 $query->where('kode_divisi', $request->kode_divisi);
             }
 
-            // 🔹 Urutkan data
-            $query->orderBy('id_berita', 'desc');
+            if ($request->filled('dari') && $request->filled('sampai')) {
+                $query->whereBetween('tgl_input', [$request->dari, $request->sampai]);
+            }
 
-            // 🔹 Ambil data
+            /** Urutkan & paginasi */
+            $query->orderBy('id_berita', 'desc');
             $berita = $query->paginate(10);
 
-            // 🔹 Data referensi tambahan
+            /** 🔗 Ambil data referensi */
             $dataPrioritas = Prioritas::orderBy('skala_prioritas', 'asc')->get();
             $getMedia = DB::table('mediapartner')
                 ->where('kode_satker_penjalin', $user->kode_satker)
                 ->get();
             $getDivisi = DB::table('divisi')->get();
 
-            /*Kirim response JSON*/
+            /** Kembalikan response */
             return response()->json([
                 'success' => true,
-                'message' => 'Data berita berhasil diambil',
+                'message' => 'Data berita berhasil diperoleh',
+                'filters' => [
+                    'nama_berita' => $request->nama_berita,
+                    'kode_divisi' => $request->kode_divisi,
+                    'periode' => [$request->dari, $request->sampai],
+                ],
                 'data' => $berita->items(),
                 'pagination' => [
                     'current_page' => $berita->currentPage(),
@@ -77,7 +80,8 @@ class BeritaController extends Controller
                 'media_partner' => $getMedia,
                 'divisi' => $getDivisi,
                 'prioritas' => $dataPrioritas,
-            ],200);
+            ], 200);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -165,7 +169,6 @@ class BeritaController extends Controller
             return $value;
         }
 
-        // Default
         return [];
     }
 

@@ -38,8 +38,10 @@ Route::middleware('auth:sanctum')->group(function () {
     /*data berita*/
     Route::get('/berita',[BeritaController::class,'apiIndex'])->name('api.berita.index');
     Route::post('/berita',[BeritaController::class,'apiStore'])->name('api.berita.store');
-    Route::put('/berita/{id}',[BeritaController::class,'apiUpdate'])->name('api.berita.update');
-    Route::delete('/berita/{id}',[BeritaController::class,'apiDestroy'])->name('api.berita.destroy');
+    Route::match(['put','post'],'/berita/{id}',[BeritaController::class,'apiUpdate'])->name('api.berita.update');
+    Route::match(['delete','post'],'/berita/{id}',[BeritaController::class,'apiDestroy'])->name('api.berita.destroy');
+    //Route::put('/berita/{id}',[BeritaController::class,'apiUpdate'])->name('api.berita.update');
+    //Route::delete('/berita/{id}',[BeritaController::class,'apiDestroy'])->name('api.berita.destroy');
 });
 
 
