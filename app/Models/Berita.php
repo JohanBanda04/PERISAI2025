@@ -33,4 +33,8 @@ class Berita extends Model
     {
         return $this->belongsTo(Prioritas::class, 'prioritas_id', 'id_prioritas');
     }
+
+    public function divisi(){
+        return $this->belongsTo(Divisi::class,'kode_divisi','kode_divisi');
+    }
 }

@@ -18,6 +18,21 @@ use PhpOffice\PhpWord\Settings;
 
 class MediapartnerController extends Controller
 {
+    public function apiIndex()
+    {
+        $media = Mediapartner::select(
+            'id_media',
+            'name',
+            'kode_media',
+            'jenis_media'
+        )->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $media,
+        ]);
+    }
+
     public function index(Request $request)
     {
 
