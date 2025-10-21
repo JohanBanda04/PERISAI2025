@@ -3,6 +3,9 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BeritaController;
 use App\Http\Controllers\DatasatkerController;
+use App\Http\Controllers\DivisiController;
+use App\Http\Controllers\MediapartnerController;
+use App\Http\Controllers\PrioritasController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +45,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::match(['delete','post'],'/berita/{id}',[BeritaController::class,'apiDestroy'])->name('api.berita.destroy');
     //Route::put('/berita/{id}',[BeritaController::class,'apiUpdate'])->name('api.berita.update');
     //Route::delete('/berita/{id}',[BeritaController::class,'apiDestroy'])->name('api.berita.destroy');
+
+    // Route untuk media partner
+    Route::get('/mediapartner',[MediapartnerController::class,'apiIndex'])->name('api.media.index');
+
+    //Route untuk divisi
+    Route::get('/divisi',[DivisiController::class,'apiIndex'])->name('api.divisi.index');
+
+    //Route untuk prioritas
+    Route::get('/prioritas',[PrioritasController::class,'apiIndex'])->name('api.prioritas.index');
 });
 
 

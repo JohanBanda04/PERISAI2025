@@ -607,7 +607,7 @@
                                         </center>
                                         <button class="add_field_button btn btn-success m-l-15 col-lg-12 "
                                                 style="margin-bottom: 15px;">
-                                            Tambah Kolom Mediaa Lokal {{--triggerjo--}}
+                                            Tambah Kolom Mediax Lokal {{--triggerjo--}}
                                         </button>
                                         <table class="m-l-15 col-lg-12">
                                             <tr class="">
