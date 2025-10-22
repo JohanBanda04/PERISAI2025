@@ -52,6 +52,34 @@ class DatasatkerController extends Controller
 
     }
 
+    public function apiList(Request $request)
+    {
+        try {
+            $query = Satker::select('id', 'name', 'kode_satker')
+                // ✅ Urutkan berdasarkan angka di akhir kode_satker (bukan string)
+                ->orderByRaw("CAST(SUBSTRING(kode_satker, 9) AS UNSIGNED) ASC");
+
+            if ($request->filled('search')) {
+                $query->where('name', 'like', '%' . $request->search . '%');
+            }
+
+            $satker = $query->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data satker berhasil diambil dan diurutkan secara numerik berdasarkan kode_satker',
+                'data' => $satker
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+
     public function apiIndex(Request $request)
     {
         $query = Satker::query();
@@ -431,6 +459,7 @@ class DatasatkerController extends Controller
 
     public function getberita($kode_satker, Request $request)
     {
+        //dd(auth()->user()->kode_satker);
         //return "data berita satker broyyy johan";
         /*penggunaan define gate*/
         //$this->authorize('admin');
