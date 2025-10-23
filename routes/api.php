@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BeritaController;
 use App\Http\Controllers\DatasatkerController;
 use App\Http\Controllers\DivisiController;
+use App\Http\Controllers\KonfigurasiBeritaController;
 use App\Http\Controllers\MediapartnerController;
 use App\Http\Controllers\PrioritasController;
 use App\Http\Controllers\UserController; // ✅ Tambah controller baru
@@ -78,4 +79,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // ⚡ PRIORITAS
     // ======================
     Route::get('/prioritas', [PrioritasController::class, 'apiIndex'])->name('api.prioritas.index');
+
+    // ======================
+// ⚙️ KONFIGURASI BERITA
+// ======================
+    Route::get('/konfigurasi-berita', [KonfigurasiBeritaController::class, 'apiIndex'])
+        ->name('api.konfigurasi.berita.index');
+
 });
