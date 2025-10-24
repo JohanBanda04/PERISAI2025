@@ -5,6 +5,7 @@ use App\Http\Controllers\BeritaController;
 use App\Http\Controllers\DatasatkerController;
 use App\Http\Controllers\DivisiController;
 use App\Http\Controllers\KonfigurasiBeritaController;
+use App\Http\Controllers\LaporanWhatsappController;
 use App\Http\Controllers\MediapartnerController;
 use App\Http\Controllers\PrioritasController;
 use App\Http\Controllers\UserController; // ✅ Tambah controller baru
@@ -85,5 +86,13 @@ Route::middleware('auth:sanctum')->group(function () {
 // ======================
     Route::get('/konfigurasi-berita', [KonfigurasiBeritaController::class, 'apiIndex'])
         ->name('api.konfigurasi.berita.index');
+
+    Route::post('/laporan-whatsapp', [LaporanWhatsappController::class, 'apiGenerate'])
+        ->name('api.laporan.whatsapp');
+
+    Route::post('/laporan-whatsapp-preview', [BeritaController::class, 'apiLaporanWhatsappPreview'])
+        ->name('api.laporan.whatsapp.preview');
+
+
 
 });

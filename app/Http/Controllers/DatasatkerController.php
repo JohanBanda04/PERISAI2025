@@ -1077,6 +1077,7 @@ class DatasatkerController extends Controller
 
     public function whatssapgenerate_message_today_kanwil(Request $request)
     {
+        //return "testy";
         $namabulan = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September",
             "Oktober", "November", "Desember",
         ];
