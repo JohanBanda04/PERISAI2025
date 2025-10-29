@@ -4,12 +4,234 @@ namespace App\Http\Controllers;
 
 use App\Models\Berita;
 use App\Models\Prioritas;
+//use Barryvdh\DomPDF\PDF;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
+
 class BeritaController extends Controller
 {
+
+
+    public function apiLaporanBeritaPerMedia(Request $request)
+    {
+        try {
+            // 🧩 Ambil parameter
+            $jenisMedia = $request->jenis_media;
+            $kodeSatker = $request->kode_satker;
+            $kodeMedia  = $request->kode_media;
+            $dari       = $request->dari;
+            $sampai     = $request->sampai;
+            $isDownload = $request->boolean('download', false);
+
+            // 🌍 Locale Indonesia
+            Carbon::setLocale('id');
+            setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'Indonesian', 'id', 'en_US');
+
+            // 🏢 Data satker
+            $satker = DB::table('satker')->where('kode_satker', $kodeSatker)->first();
+            $satker_name = $satker->name ?? 'Unknown Satker';
+
+            // 📆 Nama bulan manual
+            $namabulan = [
+                "", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+            ];
+
+            // 📰 Ambil semua berita sesuai rentang tanggal
+            $getberita = DB::table('berita')
+                ->where('kode_satker', $kodeSatker)
+                ->whereBetween('tgl_input', [$dari, $sampai])
+                ->get();
+
+            if ($getberita->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak ada data berita untuk periode ini.'
+                ], 404);
+            }
+
+            // 🔹 Ambil divisi terkait berita
+            $kodeDivisiList = $getberita->pluck('kode_divisi')->unique()->filter()->values();
+            $divisiMap = DB::table('divisi')
+                ->whereIn('kode_divisi', $kodeDivisiList)
+                ->pluck('nama_divisi', 'kode_divisi');
+
+            $kode_divisi_pilihan = $kodeDivisiList->count() === 1
+                ? $kodeDivisiList->first()
+                : 'all_berita';
+
+            $nama_divisi = $kode_divisi_pilihan === 'all_berita'
+                ? 'Semua Berita'
+                : ($divisiMap[$kode_divisi_pilihan] ?? 'Berita Umum');
+
+            $filteredBerita = [];
+
+            /* ============================================================
+               🔹 HANDLE: SOSIAL MEDIA
+               ============================================================ */
+            if ($jenisMedia === 'sosial_media') {
+                foreach ($getberita as $b) {
+                    $filteredBerita[] = [
+                        'tgl_input' => $b->tgl_input,
+                        'facebook'  => $b->facebook ?? '',
+                        'instagram' => $b->instagram ?? '',
+                        'twitter'   => $b->twitter ?? '',
+                        'tiktok'    => $b->tiktok ?? '',
+                        'sippn'     => $b->sippn ?? '',
+                        'youtube'   => $b->youtube ?? '',
+                    ];
+                }
+
+                $pdf = app('dompdf.wrapper');
+                $pdf->loadView('laporan.cetaklaporanberitapermedia', [
+                    'filteredBerita' => $filteredBerita,
+                    'satker_name'    => $satker_name,
+                    'tgl_dari'       => $dari,
+                    'tgl_sampai'     => $sampai,
+                    'namabulan'      => $namabulan,
+                    'kode_divisi_pilihan' => $kode_divisi_pilihan,
+                    'nama_divisi'         => $nama_divisi,
+                    'total_facebook' => collect($filteredBerita)->where('facebook', '!=', '')->count(),
+                    'total_instagram'=> collect($filteredBerita)->where('instagram', '!=', '')->count(),
+                    'total_twitter'  => collect($filteredBerita)->where('twitter', '!=', '')->count(),
+                    'total_tiktok'   => collect($filteredBerita)->where('tiktok', '!=', '')->count(),
+                    'total_sippn'    => collect($filteredBerita)->where('sippn', '!=', '')->count(),
+                    'total_youtube'  => collect($filteredBerita)->where('youtube', '!=', '')->count(),
+                ]);
+
+                $pdf->setPaper('a4', 'landscape')->setOptions([
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'dpi' => 120,
+                    'defaultFont' => 'Arial'
+                ]);
+                $pdf->render();
+
+                $fileName = 'Laporan_SosialMedia_' . date('Ymd_His') . '.pdf';
+                return $isDownload
+                    ? $pdf->download($fileName)
+                    : $pdf->stream($fileName);
+            }
+
+            /* ============================================================
+               🔹 HANDLE: MEDIA LOKAL / NASIONAL
+               ============================================================ */
+            foreach ($getberita as $berita) {
+                $mediaArray = [];
+
+                if ($jenisMedia === 'media_lokal') {
+                    $mediaArray = json_decode($berita->media_lokal, true) ?? [];
+                } elseif ($jenisMedia === 'media_nasional') {
+                    $mediaArray = json_decode($berita->media_nasional, true) ?? [];
+                }
+
+                foreach ($mediaArray as $entry) {
+                    if (!str_contains($entry, '|||')) continue;
+
+                    list($kode, $judul, $link) = explode('|||', $entry);
+
+                    // Filter media
+                    if (!empty($kodeMedia) && $kodeMedia !== 'semua' && $kode !== $kodeMedia) {
+                        continue;
+                    }
+
+                    $filteredBerita[] = [
+                        'tgl_input'  => $berita->tgl_input,
+                        'kode_media' => trim($kode),
+                        'judul'      => trim($judul),
+                        'link'       => trim($link),
+                        'kode_divisi'=> $berita->kode_divisi,
+                    ];
+                }
+            }
+
+            // 📰 Ambil daftar media partner
+            $mediapartnerQuery = DB::table('mediapartner')->where('jenis_media', $jenisMedia);
+            if (!empty($kodeMedia) && $kodeMedia !== 'semua') {
+                $mediapartnerQuery->where('kode_media', $kodeMedia);
+            } else {
+                $mediapartnerQuery->where(function ($q) use ($kodeSatker) {
+                    $q->where('kode_satker_penjalin', $kodeSatker)
+                        ->orWhereNull('kode_satker_penjalin')
+                        ->orWhere('kode_satker_penjalin', '');
+                });
+            }
+            $mediapartner = $mediapartnerQuery->get();
+
+            // 🗓️ Komponen waktu
+            $tgl_dari = date('d', strtotime($dari));
+            $bulan_dari = date('n', strtotime($dari));
+            $tahun_dari = date('Y', strtotime($dari));
+            $tgl_sampai = date('d', strtotime($sampai));
+            $bulan_sampai = date('n', strtotime($sampai));
+            $tahun_sampai = date('Y', strtotime($sampai));
+
+            // 🖨️ Tentukan view
+            $view = 'laporan.cetakrekapexternal_medialokal_permedia';
+            if ($jenisMedia === 'media_nasional' && view()->exists('laporan.cetakrekapexternal_medianasional_perberita')) {
+                $view = 'laporan.cetakrekapexternal_medianasional_perberita';
+            }
+
+            // 🧾 Generate PDF
+            $pdf = app('dompdf.wrapper');
+            $pdf->loadView($view, [
+                'filteredBerita'       => $filteredBerita,
+                'namabulan'            => $namabulan,
+                'tgl_dari'             => $tgl_dari,
+                'bulan_dari'           => $bulan_dari,
+                'tahun_dari'           => $tahun_dari,
+                'tgl_sampai'           => $tgl_sampai,
+                'bulan_sampai'         => $bulan_sampai,
+                'tahun_sampai'         => $tahun_sampai,
+                'satker_name'          => $satker_name,
+                'mediapartner'         => $mediapartner,
+                'kode_media'           => $kodeMedia,
+                'kode_divisi_pilihan'  => $kode_divisi_pilihan,
+                'nama_divisi'          => $nama_divisi,
+            ]);
+
+            $pdf->setPaper('a4', 'landscape')->setOptions([
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'dpi' => 120,
+                'defaultFont' => 'Arial'
+            ]);
+            $pdf->render();
+
+            $fileName = 'Laporan_' . ucfirst(str_replace('_', '', $jenisMedia)) . '_' . date('Ymd_His') . '.pdf';
+            return $isDownload
+                ? $pdf->download($fileName)
+                : $pdf->stream($fileName);
+
+        } catch (\Exception $e) {
+            Log::error('Error Laporan PDF: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+
+    public function apiExportLaporanBeritaPerMedia(Request $request)
+    {
+        $jenisMedia = $request->jenis_media;
+        $kodeSatker = $request->kode_satker;
+        $dari = $request->dari;
+        $sampai = $request->sampai;
+
+        // Export Excel sesuai kebutuhan
+        return response()->json([
+            'success' => true,
+            'message' => "Export Excel untuk $jenisMedia dari $dari s.d. $sampai (Satker: $kodeSatker)",
+        ]);
+    }
+
     public function apiLaporanWhatsappPreview(Request $request)
     {
         $start = $request->input('start');

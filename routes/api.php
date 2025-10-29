@@ -93,6 +93,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/laporan-whatsapp-preview', [BeritaController::class, 'apiLaporanWhatsappPreview'])
         ->name('api.laporan.whatsapp.preview');
 
+    // ======================
+    // 🧾 LAPORAN BERITA PER MEDIA
+    // ======================
+    Route::post('/laporan-berita-permedia', [BeritaController::class, 'apiLaporanBeritaPerMedia'])
+        ->name('api.laporan.berita.permedia');
+
+    Route::post('/export-laporan-berita-permedia', [BeritaController::class, 'apiExportLaporanBeritaPerMedia'])
+        ->name('api.export.laporan.berita.permedia');
 
 
 });
