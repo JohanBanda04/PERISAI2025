@@ -2947,6 +2947,7 @@ where kode_satker='$kode_satker' and length(youtube)>10 AND tgl_input between '$
 
     public function cetaklaporanberitapermedia(Request $request)
     {
+        //echo "cetak pdf dan excel"; die;
         $namabulan = [
             "", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
             "Juli", "Agustus", "September", "Oktober", "November", "Desember"
@@ -3038,6 +3039,7 @@ where kode_satker='$kode_satker' and length(youtube)>10 AND tgl_input between '$
         /* ============================================================
            HANDLE: MEDIA LOKAL / NASIONAL
            ============================================================ */
+        //echo "non-sosmed"; die;
         $filteredBerita = [];
         foreach ($getberita as $berita) {
             $mediaArray = [];

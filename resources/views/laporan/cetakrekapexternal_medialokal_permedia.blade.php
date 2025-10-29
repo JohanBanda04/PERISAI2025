@@ -4,9 +4,6 @@
     <meta charset="utf-8">
     <title>Laporan Media Lokal</title>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/paper-css/0.4.1/paper.css">
-
     <style>
         @page {
             size: A4 landscape;
@@ -15,94 +12,96 @@
 
         body {
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 12px;
+            font-size: 11px;
             color: #000;
         }
 
-        .sheet {
-            overflow: visible;
-            height: auto !important;
+        h1, h2, h3, h4 {
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .header h2 {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .header h3 {
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        .header h4 {
+            font-size: 12px;
+            margin-top: 3px;
+            font-style: italic;
+            color: #333;
         }
 
         table {
-            border-collapse: collapse;
             width: 100%;
-        }
-
-        .table-wrapper {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-        }
-
-        .tabelpresensi {
-            width: 70%;
-            table-layout: fixed;
-        }
-
-        .tabelpresensi th, .tabelpresensi td {
-            border: 1px solid #000;
-            padding: 5px;
-            word-wrap: break-word;
-            vertical-align: top;
-        }
-
-        .tabelpresensi th {
-            background: #f6ee1a;
-            font-weight: bold;
-            text-align: center;
-        }
-
-        .tabel-summary {
-            width: 28%;
             border-collapse: collapse;
-            font-size: 12px;
+            page-break-inside: avoid;
         }
 
-        .tabel-summary th, .tabel-summary td {
+        th, td {
             border: 1px solid #000;
-            padding: 5px;
+            padding: 5px 6px;
+            vertical-align: middle;
+            word-wrap: break-word;
         }
 
-        .tabel-summary th {
-            background: #e6e6e6;
-        }
-
-        .center {
+        th {
+            background: #ffe600;
             text-align: center;
-        }
-
-        .italic {
-            font-style: italic;
-        }
-
-        .bold {
             font-weight: bold;
+        }
+
+        td {
+            text-align: left;
+        }
+
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .bold { font-weight: bold; }
+        .grey { background: #eaeaea; }
+        .summary-title { background: #d8d8d8; }
+
+        .summary-table {
+            margin-top: 25px;
+            width: 50%;
+            border-collapse: collapse;
+            font-size: 11px;
+            page-break-inside: avoid;
+        }
+
+        .summary-table th, .summary-table td {
+            border: 1px solid #000;
+            padding: 6px;
+        }
+
+        .summary-table th {
+            background: #f7f7a3;
+        }
+
+        /* Hindari tabel terpotong di halaman PDF */
+        tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
         }
     </style>
 </head>
 
-<body class="A4 landscape">
-
+<body>
 @php
-    use Illuminate\Support\Facades\DB;
     use Carbon\Carbon;
+    use Illuminate\Support\Facades\DB;
 
-    $kode_divisi_pilihan = $kode_divisi_pilihan ?? 'all_berita';
-   $jenis_berita = '';
-
-    if ($kode_divisi_pilihan === 'all_berita') {
-        $jenis_berita = 'Semua Berita';
-    } elseif ($kode_divisi_pilihan === 'berita_umum') {
-        $jenis_berita = 'Berita Umum';
-    } else {
-        $nama_divisi = DB::table('divisi')
-            ->where('kode_divisi', $kode_divisi_pilihan)
-            ->value('nama_divisi');
-        $jenis_berita = 'Berita ' . ($nama_divisi ?: '-');
-    }
-
-    // Hitung jumlah berita per media dari filteredBerita (bukan dari mediapartner)
     $countPerMedia = [];
     foreach ($filteredBerita as $b) {
         $kode = $b['kode_media'] ?? '-';
@@ -112,129 +111,102 @@
     $totalBerita = array_sum($countPerMedia);
 @endphp
 
-<section class="sheet padding-10mm">
+<div class="header">
+    <h2>REKAP BERITA MEDIA EKSTERNAL (LOKAL)</h2>
+    <h3>{{ strtoupper($nama_divisi ?? 'BERITA UMUM') }}</h3>
+    <h3>
+        PERIODE {{ $tgl_dari }} {{ strtoupper($namabulan[$bulan_dari]) }} {{ $tahun_dari }}
+        s.d. {{ $tgl_sampai }} {{ strtoupper($namabulan[$bulan_sampai]) }} {{ $tahun_sampai }}
+    </h3>
 
-    {{-- HEADER --}}
-    <div style="text-align: center; margin-bottom: 10px;">
-        <div id="title" class="bold" style="font-size: 18px;">
-            REKAP BERITA MEDIA EKSTERNAL (LOKAL)
-        </div>
-        <div class="bold" style="font-size: 14px;">
-            {{ strtoupper($jenis_berita) }}
-        </div>
-        <div style="font-size: 13px;">
-            PERIODE {{ $tgl_dari }} {{ strtoupper($namabulan[$bulan_dari]) }} {{ $tahun_dari }}
-            s.d. {{ $tgl_sampai }} {{ strtoupper($namabulan[$bulan_sampai]) }} {{ $tahun_sampai }}
-        </div>
+    @if(!empty($kode_media) && $kode_media !== 'semua' && count($mediapartner) > 0)
+        <h4>Media Dipilih: {{ $mediapartner[0]->name }}</h4>
+    @elseif($kode_media === 'semua')
+        <h4>Media Dipilih: Semua Media Lokal</h4>
+    @endif
+</div>
 
-        @if(!empty($kode_media) && $kode_media !== 'semua' && count($mediapartner) > 0)
-            <div class="italic" style="font-size: 13px; margin-top: 5px;">
-                Media Dipilih: {{ $mediapartner[0]->name }}
-            </div>
-        @elseif($kode_media === 'semua')
-            <div class="italic" style="font-size: 13px; margin-top: 5px;">
-                Media Dipilih: Semua Media Lokal
-            </div>
-        @endif
-    </div>
+{{-- Tabel utama --}}
+<table>
+    <thead>
+    <tr>
+        <th style="width: 4%;">No</th>
+        <th style="width: 12%;">Tanggal</th>
+        <th style="width: 27%;">Judul / Isu Berita</th>
+        <th style="width: 18%;">Media Lokal</th>
+        <th style="width: 25%;">Link Berita</th>
+        <th style="width: 7%;">Narasumber</th>
+        <th style="width: 7%;">Sentimen</th>
+    </tr>
+    </thead>
+    <tbody>
+    @forelse($filteredBerita as $i => $item)
+        @php
+            $tgl_indo = Carbon::parse($item['tgl_input'])->translatedFormat('d F Y');
+            $media_name = DB::table('mediapartner')
+                ->where('kode_media', $item['kode_media'])
+                ->value('name') ?? '-';
+        @endphp
+        <tr>
+            <td class="center">{{ $i + 1 }}</td>
+            <td class="center">{{ $tgl_indo }}</td>
+            <td>{{ $item['judul'] ?? '-' }}</td>
+            <td class="center">{{ $media_name }}</td>
+            <td>{{ $item['link'] ?? '-' }}</td>
+            <td class="center">-</td>
+            <td class="center">-</td>
+        </tr>
+    @empty
+        <tr>
+            <td colspan="7" class="center">Tidak ada data berita untuk periode ini.</td>
+        </tr>
+    @endforelse
+    </tbody>
+</table>
 
-    {{-- TABEL KIRI DAN RINGKASAN --}}
-    <div class="table-wrapper">
+{{-- Ringkasan --}}
+<table class="summary-table">
+    <tr><th colspan="2" class="center">RINGKASAN</th></tr>
+    <tr>
+        <td>Jumlah Total Berita Dimuat</td>
+        <td class="center">{{ $totalBerita }}</td>
+    </tr>
+    <tr>
+        <td>Jumlah Berita Sentimen Positif</td>
+        <td class="center">-</td>
+    </tr>
+    <tr>
+        <td>Jumlah Berita Sentimen Negatif</td>
+        <td class="center">-</td>
+    </tr>
+    <tr><th colspan="2" class="center">Jumlah Berita per Media</th></tr>
 
-        {{-- TABEL BERITA --}}
-        <table class="tabelpresensi">
-            <thead>
-            <tr>
-                <th style="width: 4%;">No</th>
-                <th style="width: 12%;">Tanggal</th>
-                <th style="width: 25%;">Judul / Isu Berita</th>
-                <th style="width: 18%;">Media Lokal</th>
-                <th style="width: 25%;">Link Berita</th>
-                <th style="width: 8%;">Narasumber</th>
-                <th style="width: 8%;">Sentimen</th>
-            </tr>
-            </thead>
-            <tbody>
-            @forelse($filteredBerita as $i => $item)
-                @php
-                    $tgl_indo = Carbon::parse($item['tgl_input'])->translatedFormat('d F Y');
-                    $media_name = DB::table('mediapartner')->where('kode_media', $item['kode_media'])->value('name') ?? '-';
-                @endphp
-                <tr>
-                    <td class="center">{{ $i + 1 }}</td>
-                    <td>{{ $tgl_indo }}</td>
-                    <td>{{ $item['judul'] ?? '-' }}</td>
-                    <td>{{ $media_name }}</td>
-                    <td>{{ $item['link'] ?? '-' }}</td>
-                    <td class="center">-</td>
-                    <td class="center">-</td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="7" class="center">Tidak ada data berita untuk periode ini.</td>
-                </tr>
-            @endforelse
-            </tbody>
-        </table>
+    @php
+        $allMediaFromBerita = collect($filteredBerita)->pluck('kode_media')->unique()->toArray();
+        $extraMedias = DB::table('mediapartner')
+            ->whereIn('kode_media', $allMediaFromBerita)
+            ->get()
+            ->keyBy('kode_media');
+    @endphp
 
-        {{-- TABEL RINGKASAN --}}
-        <table class="tabel-summary">
-            <tr>
-                <th colspan="2" class="center">RINGKASAN</th>
-            </tr>
-            <tr>
-                <td>Jumlah Total Berita Dimuat</td>
-                <td class="center">{{ $totalBerita }}</td>
-            </tr>
-            <tr>
-                <td>Jumlah Berita Sentimen Positif</td>
-                <td class="center">-</td>
-            </tr>
-            <tr>
-                <td>Jumlah Berita Sentimen Negatif</td>
-                <td class="center">-</td>
-            </tr>
-            <tr>
-                <th colspan="2" class="center">Jumlah Berita per Media</th>
-            </tr>
-
-            @php
-                // Ambil semua kode media dari berita
-                $allMediaFromBerita = collect($filteredBerita)
-                    ->pluck('kode_media')
-                    ->unique()
-                    ->toArray();
-
-                // Ambil data media tambahan dari DB
-                $extraMedias = DB::table('mediapartner')
-                    ->whereIn('kode_media', $allMediaFromBerita)
-                    ->get()
-                    ->keyBy('kode_media');
-            @endphp
-
-            @forelse($countPerMedia as $kode => $jumlah)
-                @php
-                    $nama = $extraMedias[$kode]->name ?? (
-                        DB::table('mediapartner')->where('kode_media', $kode)->value('name') ?? 'Media Tidak Dikenal'
-                    );
-                @endphp
-                <tr>
-                    <td>{{ $nama }}</td>
-                    <td class="center">{{ $jumlah }}</td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="2" class="center">Tidak ada media lokal terdaftar</td>
-                </tr>
-            @endforelse
-
-            <tr>
-                <th>Total</th>
-                <th class="center">{{ $totalBerita }}</th>
-            </tr>
-        </table>
-    </div>
-</section>
+    @forelse($countPerMedia as $kode => $jumlah)
+        @php
+            $nama = $extraMedias[$kode]->name ?? 'Media Tidak Dikenal';
+        @endphp
+        <tr>
+            <td>{{ $nama }}</td>
+            <td class="center">{{ $jumlah }}</td>
+        </tr>
+    @empty
+        <tr>
+            <td colspan="2" class="center">Tidak ada media lokal terdaftar</td>
+        </tr>
+    @endforelse
+    <tr class="grey bold">
+        <td>Total</td>
+        <td class="center">{{ $totalBerita }}</td>
+    </tr>
+</table>
 
 </body>
 </html>
