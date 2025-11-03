@@ -70,6 +70,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // 📻 MEDIA PARTNER
     // ======================
     Route::get('/mediapartner', [MediapartnerController::class, 'apiIndex'])->name('api.media.index');
+    Route::post('/mediapartner', [MediapartnerController::class, 'apiStore'])->name('api.media.store');
+    Route::match(['put','post'],'/mediapartner/{id}',[MediapartnerController::class,'apiUpdate'])->name('api.media.update');
+    Route::match(['delete','post'],'/mediapartner/{id}',[MediapartnerController::class,'apiDestroy'])->name('api.media.destroy');
 
     // ======================
     // 🧭 DIVISI

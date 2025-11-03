@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use PhpOffice\PhpWord\Settings;
 
 class MediapartnerController extends Controller
@@ -31,6 +32,141 @@ class MediapartnerController extends Controller
             'success' => true,
             'data' => $media,
         ]);
+    }
+
+    /**
+     * POST /mediapartner
+     */
+    public function apiStore(Request $request)
+    {
+        $request->validate([
+            'kode_media' => 'required|string|max:50|unique:mediapartner,kode_media',
+            'name' => 'required|string|max:255',
+            'username' => 'nullable|string|max:255|unique:mediapartner,username',
+            'email' => 'nullable|email|unique:mediapartner,email',
+            'no_hp' => 'nullable|string|max:30',
+            'jenis_media' => 'required|string',
+            'kode_satker_penjalin' => 'nullable|string|max:50',
+            'foto' => 'nullable|image|max:2048',
+        ]);
+
+        try {
+            $fotoName = null;
+            if ($request->hasFile('foto')) {
+                $fotoName = strtoupper($request->kode_media) . '.' .
+                    $request->file('foto')->getClientOriginalExtension();
+                $request->file('foto')->storeAs('public/uploads/mediapartner', $fotoName);
+            }
+
+            $media = Mediapartner::create([
+                'kode_media' => strtoupper($request->kode_media),
+                'name' => $request->name,
+                'username' => $request->username,
+                'email' => $request->email,
+                'no_hp' => $request->no_hp,
+                'jenis_media' => $request->jenis_media,
+                'kode_satker_penjalin' => $request->kode_satker_penjalin,
+                'foto' => $fotoName,
+                'password' => bcrypt(Str::random(8)), // default password acak
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Media Partner berhasil disimpan',
+                'data' => $media,
+            ], 201);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menyimpan data',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * PUT/POST /mediapartner/{id_media}
+     */
+    public function apiUpdate(Request $request, $id_media)
+    {
+        $media = Mediapartner::find($id_media);
+        if (!$media) {
+            return response()->json(['success' => false, 'message' => 'Data tidak ditemukan'], 404);
+        }
+
+        $request->validate([
+            'name' => 'nullable|string|max:255',
+            'username' => 'nullable|string|max:255|unique:mediapartner,username,' . $id_media . ',id_media',
+            'email' => 'nullable|email|unique:mediapartner,email,' . $id_media . ',id_media',
+            'no_hp' => 'nullable|string|max:30',
+            'jenis_media' => 'nullable|string',
+            'kode_satker_penjalin' => 'nullable|string|max:50',
+            'foto' => 'nullable|image|max:2048',
+        ]);
+
+        try {
+            if ($request->hasFile('foto')) {
+                if ($media->foto) {
+                    Storage::delete('public/uploads/mediapartner/' . $media->foto);
+                }
+                $fotoName = $media->kode_media . '.' . $request->file('foto')->getClientOriginalExtension();
+                $request->file('foto')->storeAs('public/uploads/mediapartner', $fotoName);
+                $media->foto = $fotoName;
+            }
+
+            $media->fill($request->only([
+                'name',
+                'username',
+                'email',
+                'no_hp',
+                'jenis_media',
+                'kode_satker_penjalin',
+            ]));
+
+            $media->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Media Partner berhasil diperbarui',
+                'data' => $media,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui data',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * DELETE/POST /mediapartner/{id_media}
+     */
+    public function apiDestroy($id_media)
+    {
+        $media = Mediapartner::find($id_media);
+        if (!$media) {
+            return response()->json(['success' => false, 'message' => 'Data tidak ditemukan'], 404);
+        }
+
+        try {
+            if ($media->foto) {
+                Storage::delete('public/uploads/mediapartner/' . $media->foto);
+            }
+
+            $media->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Media Partner berhasil dihapus',
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus data',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function index(Request $request)

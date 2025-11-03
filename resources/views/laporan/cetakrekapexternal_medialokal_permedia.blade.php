@@ -115,6 +115,7 @@
     <h2>REKAP BERITA MEDIA EKSTERNAL (LOKAL)</h2>
     <h3>{{ strtoupper($nama_divisi ?? 'BERITA UMUM') }}</h3>
     <h3>
+
         PERIODE {{ $tgl_dari }} {{ strtoupper($namabulan[$bulan_dari]) }} {{ $tahun_dari }}
         s.d. {{ $tgl_sampai }} {{ strtoupper($namabulan[$bulan_sampai]) }} {{ $tahun_sampai }}
     </h3>
