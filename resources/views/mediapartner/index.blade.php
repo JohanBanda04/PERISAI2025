@@ -150,7 +150,7 @@
                                            margin: 0 auto; overflow-x: auto; white-space: nowrap;">
                                                     <div class="btn-group">
 
-                                                        <a href="{{ route('mediaqrcode',$d->kode_media) }}"
+                                                        <a href="{{ route('mediaqrcode',$d->kode_media??"") }}"
                                                            class="qrcode_media btn btn-info btn-sm"
                                                            style="border-radius: 5px; background-color: #786f18; margin-right: 10px;"
                                                            kode_media="{{ $d->kode_media }}" method="get">
@@ -205,7 +205,7 @@
                                                                 <path d="M9 13h6"/>
                                                             </svg>
                                                         </a>
-                                                        <form action="{{ route('mediadelete',$d->kode_media) }}"
+                                                        <form action="{{ route('mediadelete',$d->kode_media??"") }}"
                                                               method="post"
                                                               style="margin-left: 5px; ">
                                                             @csrf

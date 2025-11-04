@@ -25,7 +25,8 @@ class MediapartnerController extends Controller
             'id_media',
             'name',
             'kode_media',
-            'jenis_media'
+            'jenis_media',
+            'foto'
         )->get();
 
         return response()->json([
@@ -82,6 +83,27 @@ class MediapartnerController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function apiShow($id_media)
+    {
+        $media = Mediapartner::select(
+            'id_media',
+            'name',
+            'username',
+            'kode_media',
+            'kode_satker_penjalin',
+            'email',
+            'no_hp',
+            'jenis_media',
+            'foto'
+        )->find($id_media);
+
+        if (!$media) {
+            return response()->json(['success' => false, 'message' => 'Data tidak ditemukan'], 404);
+        }
+
+        return response()->json(['success' => true, 'data' => $media]);
     }
 
     /**
@@ -169,9 +191,29 @@ class MediapartnerController extends Controller
         }
     }
 
+    public function getNextKode()
+    {
+        $last = Mediapartner::orderBy('id_media', 'desc')->first();
+
+        if (!$last || !$last->kode_media) {
+            $nextKode = 'MED-NTB-001';
+        } else {
+            preg_match('/(\d+)$/', $last->kode_media, $matches);
+            $lastNumber = isset($matches[1]) ? (int)$matches[1] : 0;
+            $nextKode = 'MED-NTB-' . str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
+        }
+
+        return response()->json([
+            'success' => true,
+            'next_kode' => $nextKode,
+        ], 200);
+    }
+
+
     public function index(Request $request)
     {
 
+        //echo "testy";die;
         $default_jenismedia = "";
         //return "tes data media partner broyyy"; die;
         //$this->authorize('admin');
@@ -216,6 +258,7 @@ class MediapartnerController extends Controller
         $kode_media = "MED-NTB-0" . $kode_new;
         $kode_satker_all = DB::table('satker')->get();
         //echo "<pre>"; print_r($kode_satker_all); die;
+        //echo "mau ke view";die;
         return view('mediapartner.index', compact('mediapartners', 'kode_media','kode_satker_all'
             ,'default_jenismedia'));
     }
