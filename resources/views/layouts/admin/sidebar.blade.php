@@ -253,11 +253,11 @@
                 @endcan
                 @canany(['humas_kanwil','admin','humas_satker'])
                     <li {{ Auth::guard('satker')?'':'hidden' }} class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {{ request()->is(['datamedia/*','media/*']) ? 'show':'' }}"
+                        <a class="nav-link dropdown-toggle {{ Route::is('datamedia', 'media*') ? 'show' : '' }}"
                            href="#navbar-base"
                            data-bs-toggle="dropdown"
                            data-bs-auto-close="false" role="button"
-                           aria-expanded=" {{ request()->is(['datamedia/*','media/*']) ? 'true':'' }} ">
+                           aria-expanded=" {{ Route::is('datamedia', 'media*') ? 'true' : '' }}  ">
                   <span class="nav-link-icon d-md-none d-lg-inline-block"><!-- Download SVG icon from http://tabler-icons.io/i/package -->
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
                          stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
@@ -267,16 +267,16 @@
                   </span>
                             <span class="nav-link-title">
                             {{--ASLIII--}}
-                                Data Media Partner
+                                Data Media Partnerrr
                   </span>
                         </a>
-                        <div class="dropdown-menu {{ request()->is(['datamedia','media/*']) ? 'show':'' }}">
+                        <div class="dropdown-menu {{ Route::is('datamedia', 'media*') ? 'show' : '' }} ">
                             <div class="dropdown-menu-columns">
                                 <div class="dropdown-menu-column">
                                     <a style="font-size: 9px; "
-                                       class="dropdown-item {{ request()->is(['datamedia','media/*']) ? 'active':'' }} "
+                                       class="dropdown-item {{ Route::is('datamedia', 'media*') ? 'active' : '' }}  "
                                        href="{{ route('datamedia') }}">
-                                        MEDIA PARTNER
+                                        MEDIA PARTNERR
                                     </a>
 
                                 </div>

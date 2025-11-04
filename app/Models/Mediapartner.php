@@ -29,7 +29,7 @@ class Mediapartner extends Authenticatable
 
     protected $guarded = [
         'id_media',
-        'kode_media',
+//        'kode_media',
     ];
 
 
