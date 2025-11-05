@@ -36,4 +36,12 @@ class Konfigberita extends Model
     public function satker(){
         return $this->belongsTo(Satker::class,'kode_satker','kode_satker');
     }
+
+    /* Tambahkan ini agar field JSON otomatis di-decode ke array */
+    protected $casts = [
+        'jumlah_tembusan_yth' => 'array',
+        'jumlah_hashtag' => 'array',
+        'jumlah_moto' => 'array',
+    ];
 }
+

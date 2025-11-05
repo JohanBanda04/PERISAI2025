@@ -27,7 +27,8 @@ class MediapartnerController extends Controller
             'kode_media',
             'jenis_media',
             'foto'
-        )->get();
+        )->orderByRaw("CAST(SUBSTRING(kode_media,9) AS UNSIGNED) DESC")
+            ->get();
 
         return response()->json([
             'success' => true,
