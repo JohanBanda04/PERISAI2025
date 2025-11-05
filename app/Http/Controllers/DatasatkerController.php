@@ -55,9 +55,37 @@ class DatasatkerController extends Controller
     public function apiList(Request $request)
     {
         try {
+            $query = Satker::select('id', 'name', 'kode_satker', 'created_at')
+                // 🔽 Urutkan berdasarkan tanggal pembuatan terbaru
+                ->orderBy('created_at', 'desc');
+
+            // 🔍 Jika ada pencarian nama
+            if ($request->filled('search')) {
+                $query->where('name', 'like', '%' . $request->search . '%');
+            }
+
+            $satker = $query->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data satker berhasil diambil dan diurutkan berdasarkan tanggal terbaru',
+                'data' => $satker,
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function apiList_old05November2025(Request $request)
+    {
+        try {
             $query = Satker::select('id', 'name', 'kode_satker')
                 // ✅ Urutkan berdasarkan angka di akhir kode_satker (bukan string)
-                ->orderByRaw("CAST(SUBSTRING(kode_satker, 9) AS UNSIGNED) ASC");
+                ->orderByRaw("CAST(SUBSTRING(kode_satker, 9) AS UNSIGNED) DESC");
 
             if ($request->filled('search')) {
                 $query->where('name', 'like', '%' . $request->search . '%');
@@ -463,7 +491,7 @@ class DatasatkerController extends Controller
         /*penggunaan define gate*/
         //$this->authorize('admin');
         $dtSatkerCek = DB::table('satker')->get();
-        $dataPrioritas = Prioritas::orderBy('id_prioritas', 'desc')->get();
+        $dataPrioritas = Prioritas::orderBy('skala_prioritas', 'asc')->get();
 
         //dd($dataPrioritas[0]->nama_prioritas_lengkap);
 
@@ -2043,7 +2071,7 @@ class DatasatkerController extends Controller
             ->get();
         $getdivisi = DB::table("divisi")->get();
         //$dataPrioritas = Prioritas::all();
-        $dataPrioritas = Prioritas::orderBy('id_prioritas', 'desc')->get();
+        $dataPrioritas = Prioritas::orderBy('skala_prioritas', 'asc')->get();
 
         return view('beritasatker.edit', compact('getmedia', 'getdivisi', 'berita', 'kode_satker', 'dataPrioritas'));
     }

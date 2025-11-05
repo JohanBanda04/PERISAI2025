@@ -101,8 +101,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // =================================================
     // ⚙️ KONFIGURASI BERITA
     // =================================================
-    Route::get('/konfigurasi-berita', [KonfigurasiBeritaController::class, 'apiIndex'])
-        ->name('api.konfigurasi.berita.index');
+//    Route::get('/konfigurasi-berita', [KonfigurasiBeritaController::class, 'apiIndex'])
+//        ->name('api.konfigurasi.berita.index');
 
     // =================================================
     // 🧾 LAPORAN WHATSAPP & BERITA PER MEDIA
@@ -120,5 +120,25 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('/export-laporan-berita-permedia', 'apiExportLaporanBeritaPerMedia')
             ->name('api.export.laporan.berita.permedia');
+    });
+
+    Route::prefix('konfigurasi-berita')->controller(KonfigurasiBeritaController::class)->group(function(){
+        /*Get data konfigurasi*/
+
+        Route::get('/','apiIndex')->name('api.konfig.index');
+        // 🔹 Tambah data konfigurasi
+        Route::post('/', 'apiStore')->name('api.konfig.store');
+
+        // 🔹 Lihat satu data konfigurasi
+        Route::get('/{id_konfig}','apiShow')->name('api.konfig.show');
+
+        // 🔹 Update konfigurasi (pakai PUT atau POST)
+        Route::match(['put', 'post'], '/{id_konfig}', 'apiUpdate')->name('api.konfig.update');
+
+        // 🔹 Hapus data konfigurasi
+        Route::match(['delete', 'post'], '/{id_konfig}', 'apiDestroy')->name('api.konfig.destroy');
+
+        Route::get('/next-kode', 'getNextKode')->name('api.konfig.next-kode');
+
     });
 });

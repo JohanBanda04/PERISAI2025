@@ -758,7 +758,7 @@
                                                         <div class="col-12">
                                                             <select name="id_prioritas"
                                                                     id="id_prioritas" class="form-select">
-                                                                <option value="">-Pilih Prioritas-</option>
+                                                                <option value="">-sPilih Prioritas-</option>
                                                                 @foreach($dataPrioritas as $ind=>$dp)
                                                                     <option value="{{ $dp->id_prioritas }}">
                                                                         {{ strtoupper($dp->nama_prioritas_lengkap) }}

@@ -193,7 +193,7 @@
                     <button onclick="addFileMedlok(<?= $berita->id_berita?>)"
                             class="{{--add_field_button_edit--}} btn btn-success m-l-15 col-lg-12 "
                             style="margin-bottom: 15px;">
-                        Tambah Kolom Media Lokal
+                        Tambah Kolom Media Lokalz
                     </button>
 
                     <?php
