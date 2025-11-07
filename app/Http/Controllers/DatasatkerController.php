@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Berita;
 use App\Models\Karyawan;
+use App\Models\Konfigberita;
 use App\Models\Konfigurasiberita;
 use App\Models\Mediapartner;
 use App\Models\Prioritas;
@@ -21,38 +22,52 @@ use PhpOffice\PhpWord\Settings;
 
 class DatasatkerController extends Controller
 {
-    public function apiIndex_bk(Request $request)
+    public function apiList(Request $request)
     {
-        $query = Satker::query();
-        // Jika ada pencarian nama satker
-        if (!empty($request->nama_satker_cari)) {
-            $query->where('name', 'like', '%' . $request->nama_satker_cari . '%');
+        try {
+            $user = $request->user(); // ambil user login (pastikan pakai auth:api di route)
+            $query = Satker::select('id', 'name', 'kode_satker', 'created_at')
+                ->orderBy('created_at', 'desc');
+
+            // 🔍 Jika user punya role humas_kanwil → filter sesuai satkernya
+            if ($user && $user->role_user === 'humas_kanwil') {
+                // ambil satker milik user
+                $allowedKode = [$user->kode_satker];
+
+                // 🔹 tambahkan satker lain yang masih digunakan di konfigurasi milik user
+                $konfigSatker = Konfigberita::where('kode_satker', $user->kode_satker)
+                    ->pluck('kode_satker')
+                    ->unique()
+                    ->toArray();
+
+                $allowedKode = array_unique(array_merge($allowedKode, $konfigSatker));
+
+                $query->whereIn('kode_satker', $allowedKode);
+            }
+
+            // 🔍 Pencarian manual opsional
+            if ($request->filled('search')) {
+                $query->where('name', 'like', '%' . $request->search . '%');
+            }
+
+            $satker = $query->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data satker berhasil diambil',
+                'data' => $satker,
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
+            ], 500);
         }
-
-        // Pagination agar efisien
-        $satker = $query->orderBy('id', 'asc')->paginate(10);
-
-        // Generate kode baru
-        $results = DB::select(DB::raw("SELECT MAX(right(kode_satker,2)) as kode FROM satker"));
-        $kode_new = $results[0]->kode + 1;
-        $kode_satker = "SAT-NTB-0" . $kode_new;
-
-        // Kembalikan JSON ke Flutter
-        return response()->json([
-            'success' => true,
-            'message' => 'Data satker berhasil diambil',
-            'data' => $satker->items(),
-            'kode_baru' => $kode_satker,
-            'pagination' => [
-                'current_page' => $satker->currentPage(),
-                'last_page' => $satker->lastPage(),
-                'total' => $satker->total(),
-            ],
-        ]);
-
     }
 
-    public function apiList(Request $request)
+
+    public function apiList_bk(Request $request)
     {
         try {
             $query = Satker::select('id', 'name', 'kode_satker', 'created_at')
@@ -80,31 +95,6 @@ class DatasatkerController extends Controller
         }
     }
 
-    public function apiList_old05November2025(Request $request)
-    {
-        try {
-            $query = Satker::select('id', 'name', 'kode_satker')
-                // ✅ Urutkan berdasarkan angka di akhir kode_satker (bukan string)
-                ->orderByRaw("CAST(SUBSTRING(kode_satker, 9) AS UNSIGNED) DESC");
-
-            if ($request->filled('search')) {
-                $query->where('name', 'like', '%' . $request->search . '%');
-            }
-
-            $satker = $query->get();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Data satker berhasil diambil dan diurutkan secara numerik berdasarkan kode_satker',
-                'data' => $satker
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
 
 
     public function apiIndex(Request $request)
@@ -143,54 +133,7 @@ class DatasatkerController extends Controller
         ]);
     }
 
-    public function apiIndex_bk2(Request $request)
-    {
-        try {
-            $query = Satker::query();
 
-            // 🔍 Pencarian: bisa pakai 'nama_satker_cari' atau 'search'
-            $keyword = $request->nama_satker_cari ?? $request->search;
-            if (!empty($keyword)) {
-                $query->where(function ($q) use ($keyword) {
-                    $q->where('name', 'like', "%$keyword%")
-                        ->orWhere('kode_satker', 'like', "%$keyword%")
-                        ->orWhere('roles', 'like', "%$keyword%");
-                });
-            }
-
-            // 🔹 Pagination (10 per halaman)
-            $satker = $query->orderBy('id', 'asc')->paginate(10);
-
-            // 🔹 Generate kode satker baru (aman jika tabel kosong)
-            $lastKode = \DB::table('satker')
-                ->selectRaw('MAX(RIGHT(kode_satker, 2)) as kode')
-                ->first();
-
-            $kodeBaru = $lastKode && $lastKode->kode
-                ? intval($lastKode->kode) + 1
-                : 1;
-
-            $kode_satker = sprintf("SAT-NTB-%02d", $kodeBaru);
-
-            // 🔹 Response JSON
-            return response()->json([
-                'success' => true,
-                'message' => 'Data satker berhasil diambil',
-                'data' => $satker->items(),
-                'kode_baru' => $kode_satker,
-                'pagination' => [
-                    'current_page' => $satker->currentPage(),
-                    'last_page' => $satker->lastPage(),
-                    'total' => $satker->total(),
-                ],
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
 
     public function apiStore(Request $request)
     {

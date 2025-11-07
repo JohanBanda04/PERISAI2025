@@ -9,13 +9,73 @@ use Illuminate\Support\Facades\Validator;
 
 class KonfigurasiBeritaController extends Controller
 {
-    /**
-     * Ambil semua konfigurasi berita.
-     */
     public function apiIndex(Request $request)
     {
         try {
-            $query = Konfigberita::select(
+            $user = $request->user(); // pastikan route pakai middleware auth:api
+
+            $query = Konfigberita::with(['satker:id,name,kode_satker,foto'])
+                ->select(
+                    'id_konfig',
+                    'name_config',
+                    'kode_satker',
+                    'salam_pembuka',
+                    'yth',
+                    'jumlah_tembusan_yth',
+                    'dari_pengirim',
+                    'pengantar',
+                    'jumlah_hashtag',
+                    'jargon',
+                    'jumlah_moto',
+                    'penutup',
+                    'salam_penutup',
+                    'jenis_konfig',
+                    'tgl_input',
+                    'tgl_update',
+                    'ttd_kakanwil',
+                    'nama_kakanwil'
+                );
+
+            // 🔹 FILTER OTOMATIS BERDASARKAN ROLE
+            if ($user && $user->role_user === 'humas_kanwil') {
+                // user humas_kanwil hanya boleh lihat konfigurasi milik satkernya
+                $query->where('kode_satker', $user->kode_satker);
+            } elseif ($request->has('kode_satker')) {
+                // admin bisa filter manual lewat query param
+                $query->where('kode_satker', $request->kode_satker);
+            }
+
+            // 🔹 Optional search (misal cari nama config)
+            if ($request->filled('search')) {
+                $search = trim($request->search);
+                $query->where('name_config', 'like', "%{$search}%");
+            }
+
+            $data = $query->orderBy('tgl_update', 'desc')->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data konfigurasi berita berhasil dimuat',
+                'data' => $data,
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat data konfigurasi berita: ' . $e->getMessage(),
+                'data' => []
+            ], 500);
+        }
+    }
+
+    /**
+     * Ambil semua konfigurasi berita.
+     */
+    public function apiIndex_bk07Nov2025(Request $request)
+    {
+        try {
+            $query = Konfigberita::with(['satker:id,name,kode_satker,foto'])
+                ->select(
                 'id_konfig',
                 'name_config',
                 'kode_satker',
@@ -93,6 +153,26 @@ class KonfigurasiBeritaController extends Controller
         }
 
         try {
+            // ✅ Konversi manual field JSON jika dikirim sebagai string
+            $jsonFields = ['jumlah_tembusan_yth', 'jumlah_hashtag', 'jumlah_moto'];
+
+            foreach ($jsonFields as $field) {
+                if ($request->has($field)) {
+                    $value = $request->$field;
+
+                    // Jika nilainya string JSON → decode
+                    if (is_string($value)) {
+                        $decoded = json_decode($value, true);
+                        if (json_last_error() === JSON_ERROR_NONE) {
+                            $request->merge([$field => $decoded]);
+                        } else {
+                            // Jika bukan JSON valid, bungkus ke array agar konsisten
+                            $request->merge([$field => [$value]]);
+                        }
+                    }
+                }
+            }
+
             $data = Konfigberita::create([
                 'name_config' => $request->name_config,
                 'kode_satker' => $request->kode_satker,
@@ -126,6 +206,7 @@ class KonfigurasiBeritaController extends Controller
         }
     }
 
+
     /**
      * ✏️ Update konfigurasi
      */
@@ -141,6 +222,22 @@ class KonfigurasiBeritaController extends Controller
         }
 
         try {
+            $jsonFields = ['jumlah_tembusan_yth', 'jumlah_hashtag', 'jumlah_moto'];
+
+            foreach ($jsonFields as $field) {
+                if ($request->has($field)) {
+                    $value = $request->$field;
+                    if (is_string($value)) {
+                        $decoded = json_decode($value, true);
+                        if (json_last_error() === JSON_ERROR_NONE) {
+                            $request->merge([$field => $decoded]);
+                        } else {
+                            $request->merge([$field => [$value]]);
+                        }
+                    }
+                }
+            }
+
             $data->update(array_merge(
                 $request->all(),
                 ['tgl_update' => now()]
@@ -158,6 +255,7 @@ class KonfigurasiBeritaController extends Controller
             ], 500);
         }
     }
+
 
     /**
      * 🗑️ Hapus konfigurasi
