@@ -94,9 +94,11 @@ class AuthController extends Controller
 
     }
     public function proseslogoutsatker(){
+        //echo "proseslogoutsatker"; die;
         if(Auth::guard('satker')->check()){
             Auth::guard('satker')->logout();
-            return redirect('/');
+            //return redirect('/');
+            return redirect()->route('landing');
         }
 
     }
@@ -107,6 +109,8 @@ class AuthController extends Controller
 
 
     public function prosesloginadmin(Request $request){
+        //echo "die"; die;
+        //dd($request);
         $pass = Hash::make($request->password);
         //dd($pass);
         //dd($request->email." - ".$request->password);

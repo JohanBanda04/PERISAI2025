@@ -20,8 +20,11 @@ class RedirectIfAuthenticated
     public function handle(Request $request, Closure $next, ...$guards)
     {
         $guards = empty($guards) ? [null] : $guards;
-
+        //dd($guards);
+        //echo "hey";die;
+        //echo Auth::guard('satker')->check(); die;
         foreach ($guards as $guard) {
+           // echo "<pre>"; print_r($guard);
             if (Auth::guard('karyawan')->check()) {
                 return redirect(RouteServiceProvider::HOME);
             }
@@ -35,6 +38,7 @@ class RedirectIfAuthenticated
                 return redirect()->route('dashboardsatker');
             }
         }
+        //die;
 
         return $next($request);
     }

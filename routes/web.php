@@ -32,11 +32,31 @@ use Illuminate\Support\Facades\Route;
 //    Route::post('/proseslogin', [AuthController::class, 'proseslogin']);
 //});
 
-/*hanya bisa diakses oleh guest*/
+//Route::get('/', function () {
+//    return view('landing');
+//})->name('landing');
+//
+///*hanya bisa diakses oleh guest*/
+//Route::middleware(['guest:satker'])->group(function () {
+//
+//    Route::post('/prosesloginsatker', [AuthController::class, 'prosesloginsatker'])->name('prosesloginsatker');
+//    Route::get('/', function () {
+//        return view('auth.loginsatker');
+//    })->name('loginsatker');
+//});
+
+// Landing Page (tidak dalam guest middleware)
+Route::get('/', function () {
+    return view('landing');
+})->name('landing');
+
+// Group untuk login satker
 Route::middleware(['guest:satker'])->group(function () {
 
-    Route::post('/prosesloginsatker', [AuthController::class, 'prosesloginsatker'])->name('prosesloginsatker');
-    Route::get('/', function () {
+    Route::post('/prosesloginsatker', [AuthController::class, 'prosesloginsatker'])
+        ->name('prosesloginsatker');
+
+    Route::get('/loginsatker', function () {
         return view('auth.loginsatker');
     })->name('loginsatker');
 });
