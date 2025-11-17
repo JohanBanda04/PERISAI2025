@@ -51,7 +51,7 @@ class KonfigurasiBeritaController extends Controller
                 $query->where('name_config', 'like', "%{$search}%");
             }
 
-            $data = $query->orderBy('tgl_update', 'desc')->get();
+            $data = $query->orderBy('tgl_input', 'desc')->get();
 
             return response()->json([
                 'success' => true,

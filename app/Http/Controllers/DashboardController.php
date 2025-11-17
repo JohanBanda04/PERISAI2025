@@ -86,7 +86,7 @@ class DashboardController extends Controller
 
     public function dashboardsatker(Request $request)
     {
-
+        //echo Auth::guard('satker')->check(); die;
         //echo "ini dashboard broyy"; die;
         $queryBerita = DB::table('berita');
         $queryKonfig = DB::table('konfigurasi_berita');

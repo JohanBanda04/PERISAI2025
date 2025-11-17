@@ -139,10 +139,42 @@
                                     {!! NoCaptcha::display() !!}
                                 </div>
                                 <div class="form-footer">
-                                    <button type="submit" class="btn btn-primary w-100">
-                                        Sign In
-                                    </button>
+
+                                    <div class="row justify-content-center">
+                                        <div class="col-12">
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                Sign In Here
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mt-2 justify-content-center">
+                                        <div class="col-12">
+                                            <a href="{{ route('landing') }}" type="submit" class="btn btn-warning w-100">
+                                                Back to Landing Page
+                                            </a>
+                                        </div>
+                                    </div>
+
                                 </div>
+
+                                {{--<div class="form-footer">--}}
+
+                                    {{--<div class="row">--}}
+                                        {{--<div class="col-6"><button type="submit" class="btn btn-primary w-100">--}}
+                                                {{--Sign In Here--}}
+                                            {{--</button></div>--}}
+
+                                    {{--</div>--}}
+                                    {{--<div class="row mt-2">--}}
+                                        {{--<div class="col-6"><button type="submit" class="btn btn-primary w-100">--}}
+                                                {{--Sign In Here--}}
+                                            {{--</button></div>--}}
+
+                                    {{--</div>--}}
+
+
+                                {{--</div>--}}
                             </form>
                         </div>
 
