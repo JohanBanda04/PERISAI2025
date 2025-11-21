@@ -353,6 +353,7 @@
 
             $('.edit').click(function () {
                 //alert('editts');
+                //return false;
                 var id_satker = $(this).attr('id_satker');
                 //alert(id_satker);
                 $.ajax({

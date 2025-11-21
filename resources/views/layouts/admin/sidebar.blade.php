@@ -241,7 +241,7 @@
                                        class="dropdown-item {{ request()->is(['datasatker']) ? 'active':'' }}"
                                        href="{{ route('datasatker') }}">
                                         {{--ASLIII--}}
-                                        DATA PENGGUNA
+                                        DATA PENGGUNAAA
                                     </a>
 
 
