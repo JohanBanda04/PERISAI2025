@@ -4,8 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use DateTimeInterface;
-use DateTimeZone;
 
 class Berita extends Model
 {
@@ -18,22 +16,11 @@ class Berita extends Model
 
     // pastikan kolom JSON otomatis didecode
     protected $casts = [
-        'media_lokal'     => 'array',
-        'media_nasional'  => 'array',
-        'tgl_input'       => 'datetime',
-        'tgl_update'      => 'datetime',
-        'created_at'      => 'datetime',
-        'updated_at'      => 'datetime',
+        'media_lokal' => 'array',
+        'media_nasional' => 'array',
+        'tgl_input' => 'datetime',
+        'tgl_update' => 'datetime',
     ];
-
-    /**
-     * Pastikan created_at & updated_at diserialisasi dalam timezone WIB
-     */
-    protected function serializeDate(DateTimeInterface $date)
-    {
-        return $date->setTimezone(new DateTimeZone('Asia/Makassar'))
-            ->format('Y-m-d H:i:s');
-    }
 
     // relasi ke tabel satker
     public function satker()
@@ -47,8 +34,7 @@ class Berita extends Model
         return $this->belongsTo(Prioritas::class, 'prioritas_id', 'id_prioritas');
     }
 
-    public function divisi()
-    {
-        return $this->belongsTo(Divisi::class, 'kode_divisi', 'kode_divisi');
+    public function divisi(){
+        return $this->belongsTo(Divisi::class,'kode_divisi','kode_divisi');
     }
 }

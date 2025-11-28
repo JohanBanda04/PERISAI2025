@@ -508,7 +508,229 @@ class DatasatkerController extends Controller
         }
     }
 
-    public function storeberita(Request $request)
+    private function normalizeMediaArray($kode_media, $jumlah)
+    {
+        if (!$kode_media || !$jumlah) return [];
+
+        $result = [];
+        $count = min(count($kode_media), count($jumlah));
+
+        for ($i = 0; $i < $count; $i++) {
+            $result[] = $kode_media[$i] . "|||" . $jumlah[$i];
+        }
+
+        return $result;
+    }
+
+    private function normalizeMediaInput($value)
+    {
+        if (empty($value)) {
+            return [];
+        }
+
+        // Kalau string JSON → decode
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+            // Kalau cuma string biasa → jadikan array tunggal
+            return [$value];
+        }
+
+        // Kalau array langsung → kembalikan saja
+        if (is_array($value)) {
+            return $value;
+        }
+
+        return [];
+    }
+
+    public function storeBerita(Request $request)
+    {
+        try {
+
+            $berita = new Berita(); // ← pakai model Eloquent
+
+            // ==========================
+            // MODE BARU (APK / API)
+            // ==========================
+            if ($request->has('media_lokal') && !is_array($request->media_lokal)) {
+
+                $berita->kode_satker   = $request->kode_satker;
+                $berita->kode_divisi   = $request->kode_divisi;
+                $berita->prioritas_id  = $request->id_prioritas;
+
+                $berita->nama_berita   = $request->judul_berita_satker;
+                $berita->facebook      = $request->facebook ?? '-';
+                $berita->website       = $request->website ?? '-';
+                $berita->instagram     = $request->instagram ?? '-';
+                $berita->twitter       = $request->twitter ?? '-';
+                $berita->tiktok        = $request->tiktok ?? '-';
+                $berita->sippn         = $request->sippn ?? '-';
+                $berita->youtube       = $request->youtube ?? '-';
+
+                // Laravel otomatis menyimpan sebagai JSON, tidak perlu json_encode
+                $berita->media_lokal     = $this->normalizeMediaInput($request->media_lokal);
+                $berita->media_nasional  = $this->normalizeMediaInput($request->media_nasional);
+
+                $berita->tgl_input = now();    // ← diset manual
+                $berita->tgl_update = now();   // ← diset manual
+
+                $berita->save(); // ← created_at & updated_at otomatis terisi
+
+                return redirect()
+                    ->route('getberita', $request->kode_satker)
+                    ->with('success', 'Data Berhasil Disimpan');
+            }
+
+            // ==========================
+            // MODE LAMA (FORM WEBSITE)
+            // ==========================
+            $mediaLokal = $this->normalizeMediaArray(
+                $request->kode_media,
+                $request->jumlah
+            );
+
+            $mediaNasional = $this->normalizeMediaArray(
+                $request->kode_media_nasional,
+                $request->jumlah_nasional
+            );
+
+            $berita->kode_satker   = $request->kode_satker;
+            $berita->kode_divisi   = $request->kode_divisi;
+            $berita->prioritas_id  = $request->id_prioritas;
+
+            $berita->nama_berita   = $request->judul_berita_satker;
+            $berita->facebook      = $request->facebook ?? '-';
+            $berita->website       = $request->website ?? '-';
+            $berita->instagram     = $request->instagram ?? '-';
+            $berita->twitter       = $request->twitter ?? '-';
+            $berita->tiktok        = $request->tiktok ?? '-';
+            $berita->sippn         = $request->sippn ?? '-';
+            $berita->youtube       = $request->youtube ?? '-';
+
+            // simpan sebagai array → Laravel encode otomatis
+            $berita->media_lokal     = $mediaLokal;
+            $berita->media_nasional  = $mediaNasional;
+
+            $berita->tgl_input = now();
+            $berita->tgl_update = now();
+
+            $berita->save(); // ← created_at & updated_at otomatis terisi
+
+            return redirect()
+                ->route('getberita', $request->kode_satker)
+                ->with('success', 'Data Berhasil Disimpan');
+
+        } catch (\Exception $e) {
+
+            return redirect()
+                ->route('getberita', $request->kode_satker)
+                ->with('warning', 'Data Gagal Disimpan: ' . $e->getMessage());
+        }
+    }
+
+    public function storeberita_bk28November2025(Request $request)
+    {
+        try {
+
+            /**
+             * =====================================================
+             *  MODE BARU (Mirip apiStore) → Request dari Flutter / API
+             *  media_lokal & media_nasional biasanya berupa string JSON
+             * =====================================================
+             */
+            if ($request->has('media_lokal') && !is_array($request->media_lokal)) {
+
+                $mediaLokal = $this->normalizeMediaInput($request->media_lokal);
+                $mediaNasional = $this->normalizeMediaInput($request->media_nasional);
+
+                $data = [
+                    "kode_satker" => $request->kode_satker,
+                    "kode_divisi" => $request->kode_divisi,
+                    "prioritas_id" => $request->id_prioritas,
+
+                    // Tanggal sama seperti apiStore
+                    "tgl_input"  => now(),
+                    "tgl_update" => now(),
+
+                    "nama_berita" => $request->judul_berita_satker,
+                    "facebook" => $request->facebook ?? '-',
+                    "website" => $request->website ?? '-',
+                    "instagram" => $request->instagram ?? '-',
+                    "twitter" => $request->twitter ?? '-',
+                    "tiktok" => $request->tiktok ?? '-',
+                    "sippn" => $request->sippn ?? '-',
+                    "youtube" => $request->youtube ?? '-',
+
+                    "media_lokal" => json_encode($mediaLokal),
+                    "media_nasional" => json_encode($mediaNasional),
+                ];
+
+                DB::table('berita')->insert($data);
+
+                return redirect()
+                    ->route('getberita', $request->kode_satker)
+                    ->with(['success' => 'Data Berhasil Disimpan']);
+            }
+
+            /**
+             * =====================================================
+             *  MODE LAMA (Form Website)
+             *  Input berupa array kode_media[] & jumlah[]
+             * =====================================================
+             */
+            $mediaLokal = $this->normalizeMediaArray(
+                $request->kode_media,
+                $request->jumlah
+            );
+
+            $mediaNasional = $this->normalizeMediaArray(
+                $request->kode_media_nasional,
+                $request->jumlah_nasional
+            );
+
+            // Data lama, tetapi tanggal tetap diseragamkan
+            $data = [
+                "kode_satker" => $request->kode_satker,
+                "kode_divisi" => $request->kode_divisi,
+                "prioritas_id" => $request->id_prioritas,
+
+                // Sama seperti apiStore
+                "tgl_input"  => now(),
+                "tgl_update" => now(),
+
+                "nama_berita" => $request->judul_berita_satker,
+                "facebook" => $request->facebook ?? '-',
+                "website" => $request->website ?? '-',
+                "instagram" => $request->instagram ?? '-',
+                "twitter" => $request->twitter ?? '-',
+                "tiktok" => $request->tiktok ?? '-',
+                "sippn" => $request->sippn ?? '-',
+                "youtube" => $request->youtube ?? '-',
+
+                "media_lokal" => json_encode($mediaLokal),
+                "media_nasional" => json_encode($mediaNasional),
+            ];
+
+            DB::table('berita')->insert($data);
+
+            return redirect()
+                ->route('getberita', $request->kode_satker)
+                ->with(['success' => 'Data Berhasil Disimpan']);
+
+        } catch (\Exception $e) {
+
+            return redirect()
+                ->route('getberita', $request->kode_satker)
+                ->with(['warning' => 'Data Gagal Disimpan: ' . $e->getMessage()]);
+        }
+    }
+
+
+
+    public function storeberita_27November2025(Request $request)
     {
         //dd($request->id_prioritas);
         //echo $request->kode_divisi; die;
